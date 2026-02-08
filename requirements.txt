@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+alembic
+httpx
+python-dotenv
+loguru
+streamlit

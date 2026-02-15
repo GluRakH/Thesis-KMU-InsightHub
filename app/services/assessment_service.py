@@ -71,6 +71,10 @@ class AssessmentService:
             level_label=result.level_label,
             dimension_scores=result.dimension_scores,
             findings=result.findings,
+            questionnaire_version=version,
+            scoring_version=version,
+            model_version="assessment-rules-v1",
+            prompt_version=f"scoring_{version}",
         )
 
     def compute_pa_assessment(self, answer_set_id: str, answers: dict[str, Any], version: str = "v1.0") -> PAAssessment:
@@ -84,6 +88,10 @@ class AssessmentService:
             level_label=result.level_label,
             dimension_scores=result.dimension_scores,
             findings=result.findings,
+            questionnaire_version=version,
+            scoring_version=version,
+            model_version="assessment-rules-v1",
+            prompt_version=f"scoring_{version}",
         )
 
     def _compute(self, answers: dict[str, Any], config: AssessmentScoringConfig) -> AssessmentResult:

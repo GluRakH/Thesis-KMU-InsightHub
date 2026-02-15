@@ -51,6 +51,12 @@ class SynthesisService:
             combined_summary=f"{combined_summary} {llm_summary}".strip(),
             priority_focus=heuristic.priority_focus,
             heuristic_reason=heuristic.reason,
+            questionnaire_version=bi_assessment.questionnaire_version,
+            scoring_version=bi_assessment.scoring_version,
+            llm_model=self._llm_client.config.model,
+            llm_prompt_version=self._llm_client.config.prompt_version,
+            model_version="synthesis-rules-v1",
+            prompt_version=self._llm_client.config.prompt_version,
             recommendation=recommendation,
         )
 

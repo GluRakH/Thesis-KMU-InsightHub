@@ -4,11 +4,57 @@ Stabile Demo für BI/PA-Assessment inkl. Validierung, Scoring, Synthesis und Ma�
 
 ## Setup
 
+### 1) Notwendige Software installieren
+
+#### Pflicht
+
+- **Git** (zum Klonen des Repositories)
+- **Python 3.11+** (empfohlen: 3.11 oder 3.12)
+- **pip** (normalerweise in Python enthalten)
+
+#### Optional (für lokale LLM-Texte)
+
+- **Ollama** (lokaler Modellserver)
+- mindestens ein Modell, z. B. `llama3.1:8b`
+
+Beispiel-Kommandos:
+
+```bash
+# Ubuntu / Debian
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip
+
+# macOS (mit Homebrew)
+brew install git python
+
+# Optional: Ollama installieren (siehe offizielle Doku)
+# https://ollama.com/download
+```
+
+### 2) Repository klonen und in den Projektordner wechseln
+
+```bash
+git clone <DEIN_REPO_URL>
+cd Thesis-KMU-InsightHub
+```
+
+### 3) Virtuelle Umgebung anlegen und aktivieren
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### 4) Optional: LLM-Modus konfigurieren
 
 Optional für reproduzierbare LLM-Läufe ohne API-Key:
 
@@ -27,6 +73,45 @@ export OLLAMA_API_KEY=...
 ```
 
 > Ohne laufendes Ollama läuft die Demo weiterhin stabil mit Dummy/Fallback-Ausgaben.
+
+### 5) API lokal starten (Hosting lokal auf deinem Rechner)
+
+```bash
+uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- API erreichbar unter: `http://localhost:8000`
+- Swagger UI unter: `http://localhost:8000/docs`
+
+### 6) Streamlit-UI starten
+
+Öffne ein **zweites Terminal**, aktiviere dort ebenfalls die virtuelle Umgebung und starte:
+
+```bash
+streamlit run app/ui/streamlit_app.py --server.port 8501
+```
+
+- UI erreichbar unter: `http://localhost:8501`
+
+### 7) Funktionstest durchführen
+
+Wenn API und UI laufen, kannst du prüfen:
+
+- API Root: `GET http://localhost:8000/`
+- Fragebogen laden: `GET http://localhost:8000/questionnaire?version=v1.0`
+- End-to-End-Flow über Swagger (`/docs`) oder über die Streamlit-Oberfläche.
+
+### 8) Tests lokal ausführen (empfohlen)
+
+```bash
+python -m unittest discover -s tests
+```
+
+### 9) Häufige Fehler & schnelle Lösungen
+
+- **`ModuleNotFoundError`**: Prüfe, ob die virtuelle Umgebung aktiv ist.
+- **Port bereits belegt (`8000` oder `8501`)**: Starte mit anderem Port, z. B. `--port 8001`.
+- **LLM/Ollama nicht erreichbar**: Setze `LLM_DRY_RUN=true`, dann läuft die App mit Fallback-Ausgaben.
 
 ## Run
 

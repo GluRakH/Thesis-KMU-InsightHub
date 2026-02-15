@@ -22,11 +22,11 @@ class _FakeResponse:
 
 
 class LLMClientTestCase(unittest.TestCase):
-    def test_dry_run_without_key_returns_dummy_and_writes_trace(self) -> None:
+    def test_dry_run_returns_dummy_and_writes_trace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             trace_file = Path(tmp_dir) / "llm_trace.jsonl"
             config = LLMClientConfig(trace_file=trace_file)
-            client = LLMClient(config=config, api_key=None, dry_run=False)
+            client = LLMClient(config=config, dry_run=True)
 
             summary = client.summarize_use_case("Kontext", {"D1": "ok"}, {"D2": "ok"})
 
@@ -50,7 +50,7 @@ class LLMClientTestCase(unittest.TestCase):
             self.assertTrue(all(isinstance(item, str) for item in measures))
 
     @patch("urllib.request.urlopen")
-    def test_call_api_uses_responses_schema(self, mocked_urlopen) -> None:
+    def test_call_api_uses_ollama_generate(self, mocked_urlopen) -> None:
         captured_request = {}
 
         def _fake_open(request, timeout=None):
@@ -58,22 +58,21 @@ class LLMClientTestCase(unittest.TestCase):
             captured_request["body"] = json.loads(request.data.decode("utf-8"))
             captured_request["headers"] = dict(request.header_items())
             captured_request["timeout"] = timeout
-            return _FakeResponse({"output_text": '{"summary":"Fertig."}'})
+            return _FakeResponse({"response": '{"summary":"Lokal via Ollama."}'})
 
         mocked_urlopen.side_effect = _fake_open
 
         client = LLMClient(
             config=LLMClientConfig(trace_file=Path(tempfile.gettempdir()) / "trace.jsonl"),
-            api_key="sk-test",
+            api_key=None,
             dry_run=False,
         )
 
         summary = client.summarize_use_case("Kontext", {"d": "x"}, {"p": "y"})
 
-        self.assertEqual(summary, "Fertig.")
-        self.assertTrue(captured_request["url"].endswith("/v1/responses"))
-        self.assertEqual(captured_request["body"]["text"]["format"]["type"], "json_schema")
-        self.assertEqual(captured_request["body"]["text"]["format"]["schema"]["required"], ["summary"])
+        self.assertEqual(summary, "Lokal via Ollama.")
+        self.assertEqual(captured_request["url"], "http://localhost:11434/api/generate")
+        self.assertEqual(captured_request["body"]["format"], "json")
 
 
 if __name__ == "__main__":

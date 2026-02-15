@@ -1,5 +1,4 @@
 import unittest
-from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -10,40 +9,48 @@ class RecommendationsApiTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
 
-    def test_run_and_finalize_recommendations(self) -> None:
-        answer_set_id = f"as-{uuid4().hex[:8]}"
-        assessments_payload = {
-            "answer_set_id": answer_set_id,
-            "use_case_id": f"uc-{uuid4().hex[:8]}",
-            "answers": {
-                "BI_01": ["ERP", "CRM"],
-                "BI_02": 2,
-                "BI_03": 2,
-                "BI_04": "Teilweise",
-                "BI_05": "Unregelmäßig/ad hoc",
-                "BI_06": "Wöchentlich",
-                "BI_07": 2,
-                "BI_08": "Nein",
-                "BI_09": 2,
-                "BI_10": 2,
-                "PA_01": 2,
-                "PA_02": 2,
-                "PA_03": "Häufig",
-                "PA_04": 2,
-                "PA_05": 2,
-                "PA_06": "4–5",
-                "PA_07": 2,
-                "PA_08": 2,
-                "PA_09": 2,
-                "PA_10": "Keine",
-            },
-        }
-        run_assessment = self.client.post("/assessments/run", json=assessments_payload)
+    def test_end_to_end_minimal_api(self) -> None:
+        use_case = self.client.post(
+            "/usecases",
+            json={"name": "E2E", "description": "End-to-End Test", "use_case_type": "combined"},
+        )
+        self.assertEqual(use_case.status_code, 200)
+        use_case_id = use_case.json()["use_case_id"]
+
+        questionnaire = self.client.get("/questionnaire", params={"version": "v1.0"}).json()
+        answers: dict[str, object] = {}
+        for question in questionnaire["questions"]:
+            if not question.get("required"):
+                continue
+            if question["type"] == "TEXT":
+                answers[question["id"]] = "Test"
+            elif question["type"] == "SINGLE_CHOICE":
+                answers[question["id"]] = question["options"][0]
+            elif question["type"] == "MULTI_CHOICE":
+                answers[question["id"]] = [question["options"][0]]
+            elif question["type"] == "SCALE":
+                answers[question["id"]] = question["scale"]["min"]
+
+        saved_answerset = self.client.post(
+            "/answersets",
+            json={"version": "v1.0", "use_case_id": use_case_id, "answers": answers},
+        )
+        self.assertEqual(saved_answerset.status_code, 200)
+        answer_set_id = saved_answerset.json()["answer_set_id"]
+
+        validate = self.client.post(f"/answersets/{answer_set_id}/validate")
+        self.assertEqual(validate.status_code, 200)
+        self.assertTrue(validate.json()["valid"])
+
+        run_assessment = self.client.post(f"/assessments/{answer_set_id}")
         self.assertEqual(run_assessment.status_code, 200)
 
-        run_reco = self.client.post("/recommendations/run", json={"answer_set_id": answer_set_id})
-        self.assertEqual(run_reco.status_code, 200)
-        catalog = run_reco.json()
+        run_synthesis = self.client.post(f"/synthesis/{answer_set_id}")
+        self.assertEqual(run_synthesis.status_code, 200)
+
+        run_catalog = self.client.post(f"/catalog/{answer_set_id}", json={"use_llm_texts": False})
+        self.assertEqual(run_catalog.status_code, 200)
+        catalog = run_catalog.json()
         self.assertIn("catalog_id", catalog)
         self.assertGreater(len(catalog["measures"]), 0)
 
@@ -53,11 +60,14 @@ class RecommendationsApiTestCase(unittest.TestCase):
                 {"measure_id": first_measure["measure_id"], "selected": True, "final_priority": 1},
             ]
         }
-        finalize = self.client.post(f"/recommendations/{catalog['catalog_id']}/finalize", json=finalize_payload)
+        finalize = self.client.post(f"/catalog/{catalog['catalog_id']}/selection", json=finalize_payload)
         self.assertEqual(finalize.status_code, 200)
-        finalized = finalize.json()
-        self.assertEqual(finalized["catalog_id"], catalog["catalog_id"])
-        self.assertIn(first_measure["measure_id"], finalized["selected_measure_ids"])
+
+        aggregated = self.client.get(f"/results/{use_case_id}")
+        self.assertEqual(aggregated.status_code, 200)
+        payload = aggregated.json()
+        self.assertEqual(payload["use_case"]["use_case_id"], use_case_id)
+        self.assertGreaterEqual(len(payload["results"]), 1)
 
 
 if __name__ == "__main__":

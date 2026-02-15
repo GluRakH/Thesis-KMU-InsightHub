@@ -67,3 +67,10 @@ Getestet werden u. a.:
 - Scoring-Regeln (inkl. Rule-Typen und Fehlerfälle)
 - Synthesis-Heuristikregeln (BI-first, PA-first, Balanced)
 - Persistenz der Reproduzierbarkeitsfelder
+
+## Repository-Aufräumarbeiten
+
+Die folgenden nicht mehr benötigten Artefakte wurden entfernt:
+
+- veraltete Thesis-Dokumente im Projekt-Root (`Thesis.pdf`, `chapter1.tex`, `chapter2.tex`, `chapter3.tex`)
+- leere Platzhalterverzeichnisse unter `app/` (nur `.gitkeep` ohne produktiven Inhalt)

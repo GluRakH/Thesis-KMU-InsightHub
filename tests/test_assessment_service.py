@@ -1,6 +1,6 @@
 import unittest
 
-from app.services.assessment_service import AssessmentService
+from app.services.assessment_service import AssessmentService, QuestionScoringConfig
 
 
 class AssessmentServiceTestCase(unittest.TestCase):
@@ -27,6 +27,8 @@ class AssessmentServiceTestCase(unittest.TestCase):
         self.assertGreaterEqual(result.score, 0)
         self.assertIn(result.maturity_level, [1, 2, 3, 4, 5])
         self.assertEqual(set(result.dimension_scores.keys()), {"BI_D1", "BI_D2", "BI_D3"})
+        self.assertEqual(result.questionnaire_version, "v1.0")
+        self.assertEqual(result.scoring_version, "v1.0")
 
     def test_compute_pa_assessment(self) -> None:
         answers = {
@@ -48,6 +50,15 @@ class AssessmentServiceTestCase(unittest.TestCase):
         self.assertGreaterEqual(result.score, 0)
         self.assertIn(result.maturity_level, [1, 2, 3, 4, 5])
         self.assertEqual(set(result.dimension_scores.keys()), {"PA_D1", "PA_D2", "PA_D3"})
+
+    def test_score_rule_multi_count_minus_one_capped(self) -> None:
+        config = QuestionScoringConfig(type="multi_count_minus_one_capped", max=3)
+        self.assertEqual(self.service._score_answer(["a", "b", "c", "d", "e"], config), 3.0)
+
+    def test_unknown_scoring_type_raises(self) -> None:
+        config = QuestionScoringConfig(type="does_not_exist")
+        with self.assertRaises(ValueError):
+            self.service._score_answer(1, config)
 
 
 if __name__ == "__main__":

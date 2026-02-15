@@ -80,6 +80,8 @@ class BIAssessment(VersionedModel):
     level_label: str = Field(default="LOW")
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
+    questionnaire_version: str = Field(default="")
+    scoring_version: str = Field(default="")
 
 
 class PAAssessment(VersionedModel):
@@ -91,6 +93,8 @@ class PAAssessment(VersionedModel):
     level_label: str = Field(default="LOW")
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
+    questionnaire_version: str = Field(default="")
+    scoring_version: str = Field(default="")
 
 
 class Synthesis(VersionedModel):
@@ -101,6 +105,10 @@ class Synthesis(VersionedModel):
     combined_summary: str = Field(default="")
     priority_focus: str = Field(default="")
     heuristic_reason: str = Field(default="")
+    questionnaire_version: str = Field(default="")
+    scoring_version: str = Field(default="")
+    llm_model: str = Field(default="")
+    llm_prompt_version: str = Field(default="")
     recommendation: str
 
 

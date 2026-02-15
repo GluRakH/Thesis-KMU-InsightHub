@@ -49,6 +49,25 @@ class QuestionnaireServiceTestCase(unittest.TestCase):
         self.assertTrue(result.valid)
         self.assertEqual(result.issues, [])
 
+    def test_validate_answer_set_detects_invalid_scale_type(self) -> None:
+        answers = self._build_valid_answers()
+        answers["BI_02"] = "hoch"
+
+        result = self.service.validate_answer_set("v1.0", answers)
+
+        self.assertFalse(result.valid)
+        self.assertTrue(any(issue.code == "INVALID_SCALE_TYPE" for issue in result.issues))
+
+    def test_validate_answer_set_adds_consistency_warning(self) -> None:
+        answers = self._build_valid_answers()
+        answers["CTX_04"] = 5
+        answers["SYN_03"] = 1
+
+        result = self.service.validate_answer_set("v1.0", answers)
+
+        self.assertFalse(result.valid)
+        self.assertTrue(any(issue.code == "CONSISTENCY_WARNING" for issue in result.issues))
+
 
 class QuestionnaireApiTestCase(unittest.TestCase):
     def setUp(self) -> None:

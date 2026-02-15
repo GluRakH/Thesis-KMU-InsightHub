@@ -112,7 +112,14 @@ class PersistenceRepository:
                 model_version=bi_payload["model_version"],
                 prompt_version=bi_payload["prompt_version"],
                 created_at=bi_payload["created_at"],
-                details={"maturity_level": bi_payload.get("maturity_level"), "level_label": bi_payload.get("level_label"), "dimension_scores": bi_payload.get("dimension_scores", {}), "findings": bi_payload.get("findings", {})},
+                details={
+                    "maturity_level": bi_payload.get("maturity_level"),
+                    "level_label": bi_payload.get("level_label"),
+                    "dimension_scores": bi_payload.get("dimension_scores", {}),
+                    "findings": bi_payload.get("findings", {}),
+                    "questionnaire_version": bi_payload.get("questionnaire_version", ""),
+                    "scoring_version": bi_payload.get("scoring_version", ""),
+                },
             )
         )
         self.session.merge(
@@ -124,7 +131,14 @@ class PersistenceRepository:
                 model_version=pa_payload["model_version"],
                 prompt_version=pa_payload["prompt_version"],
                 created_at=pa_payload["created_at"],
-                details={"maturity_level": pa_payload.get("maturity_level"), "level_label": pa_payload.get("level_label"), "dimension_scores": pa_payload.get("dimension_scores", {}), "findings": pa_payload.get("findings", {})},
+                details={
+                    "maturity_level": pa_payload.get("maturity_level"),
+                    "level_label": pa_payload.get("level_label"),
+                    "dimension_scores": pa_payload.get("dimension_scores", {}),
+                    "findings": pa_payload.get("findings", {}),
+                    "questionnaire_version": pa_payload.get("questionnaire_version", ""),
+                    "scoring_version": pa_payload.get("scoring_version", ""),
+                },
             )
         )
         self.session.commit()
@@ -155,6 +169,8 @@ class PersistenceRepository:
             level_label=bi_entity.details.get("level_label", "LOW"),
             dimension_scores=bi_entity.details.get("dimension_scores", {}),
             findings=bi_entity.details.get("findings", {}),
+            questionnaire_version=bi_entity.details.get("questionnaire_version", ""),
+            scoring_version=bi_entity.details.get("scoring_version", ""),
             model_version=bi_entity.model_version,
             prompt_version=bi_entity.prompt_version,
             created_at=bi_entity.created_at,
@@ -168,6 +184,8 @@ class PersistenceRepository:
             level_label=pa_entity.details.get("level_label", "LOW"),
             dimension_scores=pa_entity.details.get("dimension_scores", {}),
             findings=pa_entity.details.get("findings", {}),
+            questionnaire_version=pa_entity.details.get("questionnaire_version", ""),
+            scoring_version=pa_entity.details.get("scoring_version", ""),
             model_version=pa_entity.model_version,
             prompt_version=pa_entity.prompt_version,
             created_at=pa_entity.created_at,
@@ -191,6 +209,10 @@ class PersistenceRepository:
                     "combined_summary": payload.get("combined_summary", ""),
                     "priority_focus": payload.get("priority_focus", ""),
                     "heuristic_reason": payload.get("heuristic_reason", ""),
+                    "questionnaire_version": payload.get("questionnaire_version", ""),
+                    "scoring_version": payload.get("scoring_version", ""),
+                    "llm_model": payload.get("llm_model", ""),
+                    "llm_prompt_version": payload.get("llm_prompt_version", ""),
                 },
             )
         )
@@ -269,6 +291,10 @@ class PersistenceRepository:
                 combined_summary=entity.details.get("combined_summary", ""),
                 priority_focus=entity.details.get("priority_focus", ""),
                 heuristic_reason=entity.details.get("heuristic_reason", ""),
+                questionnaire_version=entity.details.get("questionnaire_version", ""),
+                scoring_version=entity.details.get("scoring_version", ""),
+                llm_model=entity.details.get("llm_model", ""),
+                llm_prompt_version=entity.details.get("llm_prompt_version", ""),
                 recommendation=entity.recommendation,
                 model_version=entity.model_version,
                 prompt_version=entity.prompt_version,

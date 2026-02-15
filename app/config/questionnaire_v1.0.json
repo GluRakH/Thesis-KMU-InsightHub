@@ -1,0 +1,39 @@
+{
+  "version": "v1.0",
+  "title": "Fragebogen BI-AutoPilot",
+  "questions": [
+    {"id": "CTX_01", "text": "Welches Ziel soll mit dem beschriebenen Use Case primär erreicht werden?", "type": "SINGLE_CHOICE", "required": true, "options": ["Kosten senken", "Durchlaufzeit reduzieren", "Qualität/Fehler reduzieren", "Transparenz/Steuerung verbessern", "Compliance/Risiko senken", "Umsatz/Service verbessern", "Sonstiges"]},
+    {"id": "CTX_02", "text": "In welchem Fachbereich bzw. Prozesskontext tritt der Use Case auf?", "type": "TEXT", "required": true},
+    {"id": "CTX_03", "text": "Wie häufig tritt der Use Case bzw. der zugrunde liegende Prozess typischerweise auf?", "type": "SINGLE_CHOICE", "required": true, "options": ["Mehrmals täglich", "Täglich", "Wöchentlich", "Monatlich", "Seltener"]},
+    {"id": "CTX_04", "text": "Wie kritisch ist der Use Case für Betrieb oder Wertschöpfung?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "CTX_05", "text": "Welche Rollen sind im Prozess wesentlich beteiligt oder betroffen?", "type": "MULTI_CHOICE", "required": false, "options": ["Fachbereich", "IT", "Management", "Controlling", "Operations", "Compliance", "Externe Partner", "Sonstige"]},
+    {"id": "CTX_06", "text": "Wie stark sind Zeit, Budget und interne Ressourcen für die Umsetzung eingeschränkt?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+
+    {"id": "BI_01", "text": "Welche Datenquellen sind für den Use Case grundsätzlich verfügbar?", "type": "MULTI_CHOICE", "required": true, "options": ["ERP", "CRM", "MES/Produktion", "Ticketing/Service", "Excel/Files", "Data Warehouse", "Cloud Apps", "Sonstige"]},
+    {"id": "BI_02", "text": "Wie gut ist der Zugriff auf die benötigten Daten organisatorisch und technisch geregelt?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "BI_03", "text": "Wie bewerten Sie die Datenqualität für den Use Case (Vollständigkeit, Aktualität, Konsistenz)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "BI_04", "text": "Sind die für den Use Case relevanten Kennzahlen eindeutig definiert und dokumentiert?", "type": "SINGLE_CHOICE", "required": true, "options": ["Nein", "Teilweise", "Ja"]},
+    {"id": "BI_05", "text": "Wie werden Reports/Dashboards aktuell im Unternehmen genutzt?", "type": "SINGLE_CHOICE", "required": false, "options": ["Nicht vorhanden", "Unregelmäßig/ad hoc", "Regelmäßig, aber wenig standardisiert", "Regelmäßig und standardisiert"]},
+    {"id": "BI_06", "text": "Welche Aktualität benötigen die Informationen für den Use Case typischerweise?", "type": "SINGLE_CHOICE", "required": true, "options": ["Echtzeit/nahe Echtzeit", "Stündlich", "Täglich", "Wöchentlich", "Monatlich"]},
+    {"id": "BI_07", "text": "Wie standardisiert sind Datenmodelle/Definitionen (z. B. einheitliche Begriffe, Dimensionen, Stammdaten)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "BI_08", "text": "Ist klar geregelt, wer für Daten, KPIs und Reports fachlich verantwortlich ist (Ownership)?", "type": "SINGLE_CHOICE", "required": true, "options": ["Nein", "Teilweise", "Ja"]},
+    {"id": "BI_09", "text": "In welchem Umfang wird Self-Service-Analytics durch Fachbereiche genutzt oder angestrebt?", "type": "SCALE", "required": false, "scale": {"min": 1, "max": 5}},
+    {"id": "BI_10", "text": "Wie etabliert ist ein Monitoring über KPIs zur Steuerung und Erfolgsmessung (z. B. definierte Zielwerte, regelmäßige Reviews)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+
+    {"id": "PA_01", "text": "Wie gut ist der Prozess dokumentiert (Ablauf, Verantwortlichkeiten, Varianten)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_02", "text": "Wie stark ist der Prozess standardisiert (wenige Varianten, klare Regeln)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_03", "text": "Wie häufig treten Ausnahmen oder Sonderfälle im Prozess auf?", "type": "SINGLE_CHOICE", "required": true, "options": ["Selten", "Gelegentlich", "Häufig", "Sehr häufig"]},
+    {"id": "PA_04", "text": "In welchem Ausmaß sind Entscheidungen im Prozess regelbasiert und automatisierbar?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_05", "text": "Wie stark ist der Prozess durch Medienbrüche geprägt (Excel, E-Mail, Copy-Paste, Papier)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_06", "text": "Über wie viele Systeme/Tools verteilt sich der Prozess typischerweise?", "type": "SINGLE_CHOICE", "required": true, "options": ["1", "2–3", "4–5", ">5"]},
+    {"id": "PA_07", "text": "Wie gut lässt sich der Prozess aktuell über Kennzahlen messen (Durchlaufzeit, Fehlerquote, SLA etc.)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_08", "text": "Wie hoch sind Kontroll- oder Compliance-Anforderungen im Prozess (Freigaben, Dokumentation, Audit)?", "type": "SCALE", "required": false, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_09", "text": "Wie hoch ist die Bereitschaft im Fachbereich, Prozessschritte zu standardisieren und zu verändern?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "PA_10", "text": "Welche Erfahrung besteht bereits mit Prozessautomatisierung (RPA/Workflow/Low-Code)?", "type": "SINGLE_CHOICE", "required": false, "options": ["Keine", "Erste Piloten", "Regelmäßig im Einsatz", "Breite Nutzung/Center of Excellence"]},
+
+    {"id": "SYN_01", "text": "Wie stark hängen BI und Automatisierung im Use Case voneinander ab (z. B. Datenbasis als Voraussetzung für Automatisierung oder umgekehrt)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "SYN_02", "text": "Welche Nutzenkriterien sind für die Priorisierung am wichtigsten?", "type": "MULTI_CHOICE", "required": true, "options": ["Zeitersparnis", "Kostensenkung", "Qualitätssteigerung", "Risiko/Compliance", "Transparenz/Steuerung", "Kundennutzen"]},
+    {"id": "SYN_03", "text": "Wie hoch ist die Risikotoleranz für Pilotierung und Veränderung (Fehlertoleranz, Experimentierfreude)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
+    {"id": "SYN_04", "text": "In welchem Zeithorizont sollen erste messbare Ergebnisse vorliegen?", "type": "SINGLE_CHOICE", "required": true, "options": ["< 1 Monat", "1–3 Monate", "3–6 Monate", "6–12 Monate", "> 12 Monate"]}
+  ]
+}

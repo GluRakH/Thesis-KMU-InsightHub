@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from domain.models import (
     Answer,
@@ -128,6 +129,52 @@ class PersistenceRepository:
         )
         self.session.commit()
 
+    def load_assessments_for_answer_set(self, answer_set_id: str) -> tuple[BIAssessment, PAAssessment] | None:
+        bi_entity = self.session.scalar(
+            select(BIAssessmentEntity)
+            .where(BIAssessmentEntity.answer_set_id == answer_set_id)
+            .order_by(BIAssessmentEntity.created_at.desc())
+            .limit(1)
+        )
+        pa_entity = self.session.scalar(
+            select(PAAssessmentEntity)
+            .where(PAAssessmentEntity.answer_set_id == answer_set_id)
+            .order_by(PAAssessmentEntity.created_at.desc())
+            .limit(1)
+        )
+
+        if bi_entity is None or pa_entity is None:
+            return None
+
+        bi_assessment = BIAssessment(
+            bi_assessment_id=bi_entity.bi_assessment_id,
+            answer_set_id=bi_entity.answer_set_id,
+            score=bi_entity.score,
+            summary=bi_entity.summary,
+            maturity_level=bi_entity.details.get("maturity_level", 1),
+            level_label=bi_entity.details.get("level_label", "LOW"),
+            dimension_scores=bi_entity.details.get("dimension_scores", {}),
+            findings=bi_entity.details.get("findings", {}),
+            model_version=bi_entity.model_version,
+            prompt_version=bi_entity.prompt_version,
+            created_at=bi_entity.created_at,
+        )
+        pa_assessment = PAAssessment(
+            pa_assessment_id=pa_entity.pa_assessment_id,
+            answer_set_id=pa_entity.answer_set_id,
+            score=pa_entity.score,
+            summary=pa_entity.summary,
+            maturity_level=pa_entity.details.get("maturity_level", 1),
+            level_label=pa_entity.details.get("level_label", "LOW"),
+            dimension_scores=pa_entity.details.get("dimension_scores", {}),
+            findings=pa_entity.details.get("findings", {}),
+            model_version=pa_entity.model_version,
+            prompt_version=pa_entity.prompt_version,
+            created_at=pa_entity.created_at,
+        )
+
+        return bi_assessment, pa_assessment
+
     def save_synthesis(self, synthesis: Synthesis) -> None:
         payload = synthesis.model_dump()
         self.session.merge(
@@ -139,7 +186,12 @@ class PersistenceRepository:
                 model_version=payload["model_version"],
                 prompt_version=payload["prompt_version"],
                 created_at=payload["created_at"],
-                details={},
+                details={
+                    "answer_set_id": payload.get("answer_set_id"),
+                    "combined_summary": payload.get("combined_summary", ""),
+                    "priority_focus": payload.get("priority_focus", ""),
+                    "heuristic_reason": payload.get("heuristic_reason", ""),
+                },
             )
         )
         self.session.commit()

@@ -95,8 +95,12 @@ class PAAssessment(VersionedModel):
 
 class Synthesis(VersionedModel):
     synthesis_id: str
+    answer_set_id: str
     bi_assessment_id: str
     pa_assessment_id: str
+    combined_summary: str = Field(default="")
+    priority_focus: str = Field(default="")
+    heuristic_reason: str = Field(default="")
     recommendation: str
 
 

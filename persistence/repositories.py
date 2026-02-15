@@ -111,7 +111,7 @@ class PersistenceRepository:
                 model_version=bi_payload["model_version"],
                 prompt_version=bi_payload["prompt_version"],
                 created_at=bi_payload["created_at"],
-                details={},
+                details={"maturity_level": bi_payload.get("maturity_level"), "level_label": bi_payload.get("level_label"), "dimension_scores": bi_payload.get("dimension_scores", {}), "findings": bi_payload.get("findings", {})},
             )
         )
         self.session.merge(
@@ -123,7 +123,7 @@ class PersistenceRepository:
                 model_version=pa_payload["model_version"],
                 prompt_version=pa_payload["prompt_version"],
                 created_at=pa_payload["created_at"],
-                details={},
+                details={"maturity_level": pa_payload.get("maturity_level"), "level_label": pa_payload.get("level_label"), "dimension_scores": pa_payload.get("dimension_scores", {}), "findings": pa_payload.get("findings", {})},
             )
         )
         self.session.commit()

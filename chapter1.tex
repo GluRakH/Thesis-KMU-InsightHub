@@ -1,0 +1,111 @@
+%!TEX root = ../Thesis.tex
+
+\chapter{Einleitung}\label{cap:einleitung}
+\markboth{Einleitung}{sec:einleitung}
+In den vergangenen drei Jahrzehnten haben sich datengetriebene Analytik und digitale Prozessgestaltung von unterstützenden Werkzeugen zu zentralen Gestaltungsfeldern moderner Unternehmensführung entwickelt. \cite{Fuerst:2019} Unter dem Begriff \glsentrylong{bi} (\gls{bi}) hat sich seit den 1990er-Jahren ein Ökosystem aus Methoden, Architekturen und Anwendungen herausgebildet, das weit über klassische Reporting- und \gls{olap}-Funktionalitäten hinausgeht und heute prädiktive wie präskriptive Analytik einschließt. \cite{BaarsKemper:2021} Parallel dazu hat sich die Prozessautomatisierung von den Neugestaltungsansätzen des \glsentrylong{bpr} (\gls{bpr}) hin zu kontinuierlich betriebenem \glsentrylong{bpm} (\gls{bpm}) und seit Mitte der 2010er Jahre zu skalierbaren softwarebasierten Automatisierungslösungen wie \glsentrylong{rpa} (\gls{rpa}) entwickelt. \cite{Allweyer:2020} Beide Entwicklungslinien verstärken sich gegenseitig: Während \gls{bi} eine datenfundierte Sicht auf Performanz und Effizienz liefert, adressiert Prozessautomatisierung die operative Umsetzung und die Entlastung repetitiver Tätigkeiten. \cite{BruckerKleyKykalovaMevius:2020}
+
+Im engeren Sinne bezeichnet \gls{bi} die Gesamtheit aus \enquote{Anwendungen, Infrastrukturen und Praktiken, die den Zugang zu Daten sowie deren Analyse zur Verbesserung von Entscheidungen und Leistungsfähigkeit ermöglichen}. \cite{Gartner:2023} In kleinen und mittelständischen Unternehmen (\gls{kmu}) wird \gls{bi} zunehmend eingesetzt, um Entscheidungsprozesse zu unterstützen und Wettbewerbsvorteile zu sichern. \cite{Frank:2020} Zugleich zeigen empirische Übersichten, dass Nutzenrealisierung und Verbreitungsgrad stark von Datenqualität, Kompetenzen und organisatorischen Voraussetzungen abhängen. \cite{OECD:2021,GiannakisGerogiannisXidonas:2022}
+
+Prozessautomatisierung umfasst demgegenüber Konzepte und Technologien zur (teil-) automatisierten Ausführung wohldefinierter, regelbasierter Abläufe und zielt insbesondere auf operative Effizienzgewinne, indem manuelle Aufwände reduziert, Bearbeitungszeiten verkürzt und Fehlerquellen minimiert werden. \cite{FettkeHouyGutermuth:2020} Durch den systematischen Einsatz entsprechender Automatisierungslösungen können Routinetätigkeiten zuverlässig ausgeführt werden, sodass Mitarbeitende entlastet und wertschöpfende Aufgaben priorisiert werden können. \cite{DrawehnKrauseRennerKintz:2022}
+
+Die Verbindung der beiden Themenfelder Analytik und Automatisierung eröffnet ein besonderes Synergiepotenzial. \cite{Jäger:2023} Ansätze wie \glsentrylong{pm} (\gls{pm}) verbinden prozesszentrierte Datenanalyse mit operativen Verbesserungsschleifen und schließen damit eine lange bestehende Lücke zwischen \gls{bi} und \gls{bpm}. \cite{vanDerAalst:2016} Darüber hinaus treiben „Decision-Intelligence“-Konzepte die explizite Kopplung von Daten, Modellen, Regeln und automatisierten Aktionen voran, um Entscheidungen nicht nur zu unterstützen, sondern auch zu augmentieren oder zu automatisieren. \cite{BrethenouxEtAl:2024} Allerdings liegen integrative Entscheidungsmodelle, die \gls{bi} und Prozessautomatisierung systematisch zusammenführen, insbesondere mit Blick auf die spezifischen Rahmenbedingungen von \gls{kmu}, bislang nur punktuell vor. \cite{NajahElGharibAmyot:2023,SamuelFossoWambaMishra:2017} Diese Arbeit nimmt diese Leerstelle zum Ausgangspunkt und verbindet die konzeptionelle Fundierung mit einer prototypischen Implementierung eines Entscheidungsagenten, der die Ableitung und Operationalisierung von Automatisierungs- und Analytikentscheidungen unterstützen soll.
+
+\section{Motivation}\label{sec:motivation}
+Die erfolgreiche Nutzung digitaler Technologien wie \gls{bi} und Prozessautomatisierung ist zu einem entscheidenden Faktor für die langfristige wirtschaftliche Stabilität und die Innovationsfähigkeit von Unternehmen geworden. \cite{OECD:2021} Besonders für \gls{kmu} eröffnet die Kombination beider Ansätze erhebliche Chancen, da sie Transparenz in Entscheidungsprozessen schafft und zugleich operative Abläufe effizienter gestaltet. \cite{OECD:2021} Dennoch zeigt sich in der Praxis, dass zahlreiche Unternehmen an der Umsetzung scheitern. \cite{Seufert:2016} Gründe hierfür liegen häufig in fehlenden methodischen Vorgehensweisen, unzureichenden Datenkompetenzen und dem Mangel an strategischen Entscheidungsgrundlagen. \cite{Seufert:2016}
+
+Aus wissenschaftlicher Perspektive ist die Integration von \gls{bi} und Prozessautomatisierung von hoher Relevanz, da die systematische Verknüpfung beider Technologien Synergiepotenziale freisetzt, die über den isolierten Einsatz hinausgehen. \cite{Jäger:2023,vanDerAalst:2016} Diese Potenziale umfassen eine gesteigerte Qualität datenbasierter Entscheidungen, eine verbesserte Prozesseffizienz sowie daraus resultierend eine Erhöhung der operativen Leistungsfähigkeit von Unternehmen. \cite{Kieninger:2017} Insbesondere die Verbindung analytischer Transparenz mit automatisierter Ausführung eröffnet neue Möglichkeiten, Erkenntnisse nicht nur zu gewinnen, sondern unmittelbar in Handlungen zu überführen. \cite{Kieninger:2017}
+
+Auch aus gesellschaftlicher Perspektive gewinnt diese Thematik an Bedeutung. \cite{Peter:2017} Eine gezielte Nutzung von BI und Prozessautomatisierung erlaubt es insbesondere \gls{kmu}, ihre begrenzten Ressourcen effizienter einzusetzen, die eigene Wettbewerbsfähigkeit nachhaltig zu steigern und damit Beschäftigungs- und Wachstumschancen langfristig zu sichern. \cite{Peter:2017} Auf gesamtwirtschaftlicher Ebene trägt dies dazu bei, die digitale Transformation des Mittelstands voranzutreiben und die Innovationskraft in einem zunehmend dynamischen Wettbewerbsumfeld zu stärken. \cite{BMWi:2020}
+
+Durch die konzeptionelle Aufarbeitung und die prototypische Umsetzung eines Entscheidungsagenten soll eine praxisnahe methodische Grundlage geschaffen werden, die Unternehmen bei der systematischen Integration von \gls{bi} und Prozessautomatisierung unterstützt.
+
+
+\section{Problembeschreibung}\label{sec:problembeschreibung}
+Wie in \autoref{sec:motivation} beschrieben, verspricht die Verknüpfung von \gls{bi} und Prozessautomatisierung Wirkungszusammenhänge, scheitert in der Praxis jedoch häufig an fehlenden Rahmenwerken. Besonders \gls{kmu} stehen vor strukturellen Hürden wie begrenzten Ressourcen, fehlenden Kompetenzen und der Fragmentierung ihrer Datenlandschaften, was den Transfer von Analyseerkenntnissen in wirksames operatives Handeln erschwert. \cite{Frank:2020} 
+
+\begin{quote}
+\textbf{\glsentrylong{ps} (\gls{ps}):}
+\emph{\gls{kmu} fehlt ein strategisches, systematisiertes Vorgehen zur kombinierten Einführung von Business Intelligence und Prozessautomatisierung.}
+\end{quote}
+
+\begin{quote}
+\textbf{\glsentrylong{pd} (\gls{pd}):}
+\emph{Viele \gls{kmu} sehen sich vor die Aufgabe gestellt, Lösungen der \gls{bi} und der Prozessautomatisierung parallel oder in zeitlicher Abfolge zu etablieren, ohne dass klare Entscheidungsprozesse oder integrierte Gestaltungskonzepte vorliegen. Dadurch entstehen Datensilos und inkonsistente Informationsflüsse, was zu ineffizienten Abläufen und unzureichenden Entscheidungsgrundlagen führt. Häufig fehlen zudem explizite Kriterien zur Bewertung von Wirtschaftlichkeit, organisatorischem und technischem Reifegrad sowie technologischer Kompatibilität. Ohne ein strukturiertes Entscheidungsmodell bleibt das Potenzial der kombinierten Nutzung von \gls{bi} und Prozessautomatisierung weitgehend ungenutzt.}
+\end{quote}
+
+\textcite{Seufert:2016} zeigt auf, dass die bloße Einführung analytischer Werkzeuge die Wertschöpfung nicht garantiert, solange Governance, Orchestrierung und die Kopplung von Analysen an operative Aktionen unzureichend definiert sind. \cite{Seufert:2016} Erforderlich sind nachvollziehbare Entscheidungslogiken und Strategien, die Daten, Modelle, Prozesse und Verantwortlichkeiten zusammenführen. \cite{BrethenouxEtAl:2024} \textcite{NohrLehmannKnaup:2009} sowie \textcite{Juhrisch:2010} verweisen auf die Notwendigkeit eines durchgängigen Orchestrierungsansatzes sowie auf methodische Lücken bei der Verbindung von Analyseergebnissen mit Prozessausführung. \cite{NohrLehmannKnaup:2009,Juhrisch:2010} 
+
+Für \gls{kmu} verschärft sich das Problem, weil dort praxisnahe, skalierbare und ressourcensensible Vorgehensmodelle fehlen. \cite{Frank:2020} Zwar liegen Ansätze zur Verbindung von Datenanalyse und Prozessebene vor, etwa durch den Einsatz von \gls{pm} für die Identifikation und Priorisierung von Automatisierungskandidaten \cite{vanDerAalst:2016}, doch besteht weiterhin Bedarf an integrierten Entscheidungsrahmen, die diese Bausteine systematisch zusammenführen und auf die realen Beschränkungen von \gls{kmu} ausrichten. \cite{Frank:2020}
+
+Aus der Problemdefinition ergibt sich die zentrale Aufgabe dieser Arbeit. Es soll ein Entscheidungsmodell entwickelt werden, das die Auswahl, Bewertung und Kombination von Maßnahmen der \gls{bi} und der Automatisierung nachvollziehbar strukturiert und dadurch die operative Wirksamkeit sowie die Entscheidungsqualität in \gls{kmu} verbessert.
+
+
+\section{Forschungsfrage}\label{sec:forschungsfrage}
+
+Die Forschungsfrage strukturiert den argumentativen Weg dieser Arbeit. Ausgangspunkt ist die Einsicht, dass fundierte Entscheidungen über den kombinierten Einsatz von \gls{bi} und Prozessautomatisierung in \gls{kmu} nur dann möglich sind, wenn konzeptionelle Klärungen, ökonomische Bewertungen und ein tragfähiges Entscheidungsinstrument ineinandergreifen. 
+
+Damit wird deutlich, dass es einer methodisch fundierten Herangehensweise bedarf, die sowohl die relevanten Entscheidungskriterien und die Ausgangslage der Unternehmen berücksichtigt als auch Fragen nach Nutzen, Kosten und Risiken systematisch einbezieht. Diese Aspekte sollen in einem kohärenten Entscheidungsrahmen zusammengeführt werden und auf ihre Praxistauglichkeit geprüft werden.
+
+Aus dieser Überlegung ergibt sich die zentrale Forschungsfrage:
+
+\begin{quote}
+\textbf{\glsentrylong{ff} (\gls{ff}):} \emph{Wie können \gls{kmu} bei der Entwicklung eines strategischen, systematisierten Vorgehens zur kombinierten Einführung von Business Intelligence und Prozessautomatisierung unterstützt werden?}
+\end{quote}
+
+
+\section{Forschungsmethode und -ziele}\label{sec:forschungsmethodeUndZiele}
+In diesem \autoref{sec:forschungsmethodeUndZiele} wird die Forschungsmethode zu der Beantwortung der \gls{ff} beschrieben. Die Forschungsziele (\gls{fz}) dieser Thesis sollen durch Anwendung der Forschungsmethode abgeleitet werden.
+
+
+\subsection*{Forschungsmethode}
+Die Arbeit orientiert sich an dem multimethodischen Rahmenwerk von Nunamaker, Chen und Purdin \cite{NunamakerChen:Online} (siehe \autoref{IMG:NunamakerChen}) und beschreibt einen forschungsleitenden Zyklus aus den vier komplementären Phasen Beobachtung, Theorie aufbauen, Systementwicklung und Experimente. \cite{NunamakerChen:Online} In der Beobachtung werden relevante Phänomene, Anforderungen und Kontexte systematisch erfasst. \cite{NunamakerChen:Online} Im Kontext dieser Arbeit bedeutet das die Erarbeitung eines belastbaren Verständnisses über Aufgaben, Daten und Randbedingungen, die für \gls{kmu} beim kombinierten Einsatz von \gls{bi} und Prozessautomatisierung relevant sind. Die anschließende Theoriebildung ordnet die Befunde in konsistente Begriffe, Beziehungen und prüfbare Annahmen ein und liefert damit den konzeptionellen Kern für ein Entscheidungsmodell. \cite{NunamakerChen:Online} 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=14cm]{arbeit/images/NunamakerChen.png}
+\caption[Multi-Methodisches Rahmenwerk von \citeauthor{NunamakerChen:Online}]{Multi-Methodisches Rahmenwerk von \citeauthor{NunamakerChen:Online} \cite[][]{NunamakerChen:Online}}
+\label{IMG:NunamakerChen}
+\end{figure}
+
+In der Systementwicklung werden daraus abgeleitete Gestaltungsprinzipien in einem Artefakt umgesetzt. \cite{NunamakerChen:Online} In diesem Fall ist dies ein prototypischer Entscheidungsagent, der die zuvor abgeleiteten Entscheidungslogiken prozessierbar macht. Das Experiment bewertet dieses Artefakt anhand definierter Gütekriterien wie Nützlichkeit, Korrektheit und Übertragbarkeit. \cite{NunamakerChen:Online} Die Phasen sind iterativ miteinander verbunden und erlauben Rückkopplungen, sodass spätere Erkenntnisse frühere Schritte präzisieren und weiterentwickeln. \cite{NunamakerChen:Online}
+
+Die Eignung dieses Ansatzes für das vorliegende Forschungsvorhaben ergibt sich aus der engen Verzahnung von Theoriearbeit und Artefaktentwicklung. Die Forschungsfragen verlangen sowohl eine konzeptionelle Klärung der Entscheidungsdimensionen als auch den Nachweis praktischer Wirksamkeit in Form eines lauffähigen Systems. Das Rahmenwerk stellt sicher, dass Beobachtungen aus dem Feld in explizite Gestaltungsprinzipien überführt und anschließend in einem implementierten System nachvollziehbar realisiert werden. Zugleich schafft das Experiment eine überprüfbare Brücke zwischen theoretischer Plausibilität und empirischer Leistungsfähigkeit. 
+
+
+\subsection*{Forschungsziele}\label{sec:forschungsziele}
+
+Die Forschungsziele folgen unmittelbar aus der gewählten Methodik nach Nunamaker, Chen und Purdin. Die vier Phasen bilden eine aufeinander bezogene Abfolge, in der Beobachtungen systematisch erhoben, in der Theoriebildung zu einem konsistenten Rahmen verdichtet, in der Systementwicklung als Artefakt materialisiert und im Experiment überprüft werden. \cite{NunamakerChen:Online} Entsprechend werden die Ziele so formuliert, dass jede Phase einen überprüfbaren Output erzeugt und zugleich die nächste Phase vorbereitet. Die Forschungsziele sind damit direkt auf die Beantwortung der Forschungsfrage ausgerichtet, wie \gls{kmu} fundierte und systematisierte Entscheidungen über die kombinierte Einführung von Business Intelligence und Prozessautomatisierung treffen können.
+
+\subsubsection*{Forschungsziel 1: Beobachtung}
+Im ersten Schritt wird das Problemfeld in \gls{kmu} theoretisch erkundet. Erfasst werden organisatorische und technische Voraussetzungen, verfügbare Datenbestände und Prozessabläufe sowie hemmende und fördernde Faktoren für die kombinierte Nutzung von \gls{bi} und Prozessautomatisierung. Ziel ist die Identifikation geeigneter Konzepte, Methoden und Technologien, die als Grundlage für ein systematisiertes Vorgehen dienen können.
+
+\textbf{$\textbf{FZ}_{\textbf{1}_\textbf{O}}$:} \emph{Geeignete und mögliche Konzepte, Methoden und Technologien identifizieren, analysieren und charakterisieren, um KMU bei der Entwicklung eines strategischen, systematisierten Vorgehens zur kombinierten Einführung von \gls{bi} und Prozessautomatisierung zu unterstützen.}
+
+\subsubsection*{Forschungsziel 2: Theorie aufbauen}
+Auf Basis der Beobachtungen wird ein konzeptionelles Modell entworfen, das als theoretischer Lösungsansatz für das identifizierte Problem dient. Ziel ist die Entwicklung eines Rahmens, der die Entscheidungsfindung zur kombinierten Einführung von \gls{bi} und Prozessautomatisierung strukturiert unterstützt. 
+
+\textbf{$\textbf{FZ}_{\textbf{2}_\textbf{T}}$:} \emph{Konzept zur Unterstützung von \gls{kmu} bei der Entwicklung eines strategischen und systematisiertes Vorgehen zur kombinierten Einführung von \gls{bi} und Prozessautomatisierung entwickeln.}
+
+\subsubsection*{Forschungsziel 3: Systementwicklung}
+Das theoretische Modell wird prototypisch umgesetzt. Entwickelt wird ein lauffähiger Prototyp, der Eingaben zur Ausgangslage von KMU verarbeitet, nachvollziehbare Priorisierungen erzeugt und Entscheidungspfade transparent darstellt. Der Schwerpunkt liegt auf der Überführung des konzeptionellen Modells in eine funktionale Anwendung.
+
+\textbf{$\textbf{FZ}_{\textbf{3}_\textbf{S}}$:} \emph{Prototypische Implementierung eines Systems, um KMU zu unterstützen, ein strategisches, systematisiertes Vorgehen zur kombinierten Einführung von Business Intelligence und Prozessautomatisierung zu erstellen.}
+
+\subsubsection*{Forschungsziel 4: Experimente}
+Der Prototyp wird anhand eines realitätsnahen Szenarios evaluiert. Dabei wird überprüft, inwieweit das Framework die Entscheidungsfindung in Bezug auf Nützlichkeit, Korrektheit, Verständlichkeit und Übertragbarkeit unterstützt. 
+
+\textbf{$\textbf{FZ}_{\textbf{4}_\textbf{E}}$:} \emph{Evaluation der prototypischen Implementierung zur Überprüfung, ob das Framework KMU wirksam bei der Entwicklung eines strategischen, systematisierten Vorgehens zur kombinierten Einführung von \gls{bi} und Prozessautomatisierung unterstützt.}
+
+
+\section{Ansatz und Aufbau der Arbeit}\label{sec:ansatzUndAufbauDerArbeit}
+Die Gliederung orientiert sich an den vier Forschungszielen und führt von der Beobachtung über die Theoriebildung und Systementwicklung zur Evaluation.
+
+In Kapitel 2 wird das Forschungsziel $FZ_{1_O}$ aufgegriffen. Es werden die organisatorischen und technischen Ausgangsbedingungen in \gls{kmu} erhoben, hemmende und fördernde Faktoren der kombinierten Nutzung von \gls{bi} und Prozessautomatisierung herausgearbeitet und systematisch analysiert. Damit wird das Problemfeld fundiert charakterisiert und es werden Konzepte, Methoden und Technologien identifiziert, die als Grundlage für ein strategisch strukturiertes Vorgehen dienen können.
+
+In Kapitel 3 erfolgt die Ausarbeitung des Forschungsziels $FZ_{2_T}$. Auf Basis der Ergebnisse aus Kapitel 2 wird ein konzeptionelles Modell entwickelt, das die Entscheidungsfindung zur kombinierten Einführung von \gls{bi} und Prozessautomatisierung strukturiert unterstützt. Die zugrunde liegenden Prinzipien und Zusammenhänge werden so gefasst, dass eine spätere Operationalisierung in Form eines Prototyps möglich ist.
+
+Kapitel 4 ist dem Forschungsziel $FZ_{3_S}$ zugeordnet. In diesem Teil wird das konzeptionelle Modell prototypisch umgesetzt, sodass Eingaben zur Ausgangslage verarbeitet und nachvollziehbar begründete Entscheidungsvorschläge erzeugt werden. Dokumentiert werden die Systemarchitektur, die Schnittstellen sowie zentrale Verarbeitungsschritte, um Reproduzierbarkeit und Nachvollziehbarkeit sicherzustellen.
+
+In Kapitel 5 wird das Forschungsziel $FZ_{4_E}$ bearbeitet. Die prototypische Umsetzung wird in einem realitätsnahen Szenario geprüft. Im Mittelpunkt stehen Nützlichkeit, Korrektheit, Verständlichkeit und Übertragbarkeit. Die Bewertung folgt definierten Kriterien und kombiniert quantitative mit qualitativen Befunden, um Stärken und Grenzen des Ansatzes transparent zu machen.
+
+Kapitel 6 dient dem Abschluss der Arbeit. Die zentralen Ergebnisse werden zusammengeführt und im Hinblick auf die Forschungsfrage diskutiert. Daraus werden praktische Implikationen, die Grenzen der Studie sowie Ansatzpunkte für weiterführende Forschung abgeleitet.

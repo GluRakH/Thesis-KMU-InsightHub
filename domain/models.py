@@ -76,6 +76,10 @@ class BIAssessment(VersionedModel):
     answer_set_id: str
     score: float = Field(ge=0)
     summary: str
+    maturity_level: int = Field(default=1, ge=1, le=5)
+    level_label: str = Field(default="LOW")
+    dimension_scores: dict[str, float] = Field(default_factory=dict)
+    findings: dict[str, str] = Field(default_factory=dict)
 
 
 class PAAssessment(VersionedModel):
@@ -83,6 +87,10 @@ class PAAssessment(VersionedModel):
     answer_set_id: str
     score: float = Field(ge=0)
     summary: str
+    maturity_level: int = Field(default=1, ge=1, le=5)
+    level_label: str = Field(default="LOW")
+    dimension_scores: dict[str, float] = Field(default_factory=dict)
+    findings: dict[str, str] = Field(default_factory=dict)
 
 
 class Synthesis(VersionedModel):

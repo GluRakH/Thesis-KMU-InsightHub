@@ -70,6 +70,32 @@ class QuestionnaireApiTestCase(unittest.TestCase):
         self.assertFalse(payload["valid"])
         self.assertGreater(len(payload["issues"]), 0)
 
+    def test_run_assessments_route(self) -> None:
+        response = self.client.get("/questionnaire", params={"version": "v1.0"})
+        questionnaire = response.json()
+        answers: dict[str, object] = {}
+        for question in questionnaire["questions"]:
+            if not question.get("required"):
+                continue
+            if question["type"] == "TEXT":
+                answers[question["id"]] = "Test"
+            elif question["type"] == "SINGLE_CHOICE":
+                answers[question["id"]] = question["options"][0]
+            elif question["type"] == "MULTI_CHOICE":
+                answers[question["id"]] = [question["options"][0]]
+            elif question["type"] == "SCALE":
+                answers[question["id"]] = question["scale"]["min"]
+
+        run_response = self.client.post("/assessments/run", json={"version": "v1.0", "answers": answers})
+
+        self.assertEqual(run_response.status_code, 200)
+        payload = run_response.json()
+        self.assertIn("bi_assessment", payload)
+        self.assertIn("pa_assessment", payload)
+        self.assertIn("maturity_level", payload["bi_assessment"])
+        self.assertIn("maturity_level", payload["pa_assessment"])
+
+
 
 if __name__ == "__main__":
     unittest.main()

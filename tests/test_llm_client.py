@@ -75,6 +75,33 @@ class LLMClientTestCase(unittest.TestCase):
         self.assertEqual(captured_request["body"]["text"]["format"]["type"], "json_schema")
         self.assertEqual(captured_request["body"]["text"]["format"]["schema"]["required"], ["summary"])
 
+    @patch("urllib.request.urlopen")
+    def test_ollama_provider_works_without_api_key(self, mocked_urlopen) -> None:
+        captured_request = {}
+
+        def _fake_open(request, timeout=None):
+            captured_request["url"] = request.full_url
+            captured_request["body"] = json.loads(request.data.decode("utf-8"))
+            return _FakeResponse({"response": '{"summary":"Lokal via Ollama."}'})
+
+        mocked_urlopen.side_effect = _fake_open
+
+        client = LLMClient(
+            config=LLMClientConfig(
+                provider="ollama",
+                api_url="http://localhost:11434/api/generate",
+                trace_file=Path(tempfile.gettempdir()) / "trace.jsonl",
+            ),
+            api_key=None,
+            dry_run=False,
+        )
+
+        summary = client.summarize_use_case("Kontext", {"d": "x"}, {"p": "y"})
+
+        self.assertEqual(summary, "Lokal via Ollama.")
+        self.assertEqual(captured_request["url"], "http://localhost:11434/api/generate")
+        self.assertEqual(captured_request["body"]["format"], "json")
+
 
 if __name__ == "__main__":
     unittest.main()

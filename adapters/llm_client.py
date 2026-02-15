@@ -14,6 +14,7 @@ import urllib.request
 
 @dataclass
 class LLMClientConfig:
+    provider: str = "auto"
     model: str = "gpt-4o-mini"
     temperature: float = 0.2
     prompt_version: str = "v1"
@@ -30,6 +31,7 @@ class LLMClient:
         dry_run: bool | None = None,
     ) -> None:
         self.config = config or LLMClientConfig(
+            provider=os.getenv("LLM_PROVIDER", "auto"),
             model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.2")),
             prompt_version=os.getenv("LLM_PROMPT_VERSION", "v1"),
@@ -37,7 +39,10 @@ class LLMClient:
             timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "20")),
             trace_file=Path(os.getenv("LLM_TRACE_FILE", "logs/llm_traces.jsonl")),
         )
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+        self.provider = self._resolve_provider(self.config.provider, self.config.api_url)
+        if self.provider == "ollama" and self.config.api_url == "https://api.openai.com/v1/responses":
+            self.config.api_url = "http://localhost:11434/api/generate"
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OLLAMA_API_KEY")
 
         if dry_run is None:
             self.dry_run = os.getenv("LLM_DRY_RUN", "false").lower() == "true"
@@ -116,7 +121,7 @@ class LLMClient:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()
 
-        if self.dry_run or not self.api_key:
+        if self.dry_run or (self._requires_api_key() and not self.api_key):
             output = self._dummy_response(task_name, payload)
             self._write_trace(
                 task_name=task_name,
@@ -150,6 +155,12 @@ class LLMClient:
             return output
 
     def _call_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
+        if self.provider == "ollama":
+            return self._call_ollama_api(task_name, prompt, payload, output_key)
+
+        return self._call_openai_responses_api(task_name, prompt, payload, output_key)
+
+    def _call_openai_responses_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -202,6 +213,63 @@ class LLMClient:
         if isinstance(field, str):
             return field.strip()
         return json.dumps(field, ensure_ascii=False)
+
+    def _call_ollama_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        body = {
+            "model": self.config.model,
+            "prompt": (
+                "Du bist ein Assistenzmodell für nachvollziehbare, datensparsame KMU-Analysen. "
+                f"{prompt}\n\n"
+                f"Gib nur gültiges JSON zurück, das mindestens den Schlüssel '{output_key}' enthält.\n\n"
+                f"INPUT (JSON):\n{json.dumps(payload, ensure_ascii=False)}"
+            ),
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": self.config.temperature},
+        }
+
+        request = urllib.request.Request(
+            self.config.api_url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="ignore")
+            raise RuntimeError(f"LLM API HTTP {exc.code}: {detail}") from exc
+
+        response_text = response_payload.get("response")
+        if not isinstance(response_text, str) or not response_text.strip():
+            raise RuntimeError("Ollama API lieferte kein Textfeld 'response'.")
+
+        parsed_payload = json.loads(response_text)
+        if output_key not in parsed_payload:
+            raise RuntimeError(f"Ollama API lieferte kein Feld '{output_key}'.")
+
+        field = parsed_payload[output_key]
+        if isinstance(field, str):
+            return field.strip()
+        return json.dumps(field, ensure_ascii=False)
+
+    @staticmethod
+    def _resolve_provider(provider: str, api_url: str) -> str:
+        normalized = provider.strip().lower()
+        if normalized in {"openai", "ollama"}:
+            return normalized
+        if "11434" in api_url or "/api/generate" in api_url:
+            return "ollama"
+        return "openai"
+
+    def _requires_api_key(self) -> bool:
+        return self.provider == "openai"
 
     @staticmethod
     def _task_schema(task_name: str) -> dict[str, Any]:

@@ -17,14 +17,23 @@ export LLM_DRY_RUN=true
 export LLM_TRACE_FILE=logs/llm_traces.jsonl
 ```
 
-Optional für Live-Zugriff auf ChatGPT (Responses API):
+Optional für Live-Zugriff auf OpenAI (Responses API):
 
 ```bash
+export LLM_PROVIDER=openai
 export OPENAI_API_KEY=sk-...
 export LLM_API_URL=https://api.openai.com/v1/responses
 ```
 
-> Ohne `OPENAI_API_KEY` läuft die Demo weiterhin stabil mit Dummy/Fallback-Ausgaben.
+Optional für eine lokale Ollama-Installation:
+
+```bash
+export LLM_PROVIDER=ollama
+export LLM_MODEL=llama3.1:8b
+export LLM_API_URL=http://localhost:11434/api/generate
+```
+
+> Ohne API-Key (OpenAI) bzw. ohne laufendes Ollama läuft die Demo weiterhin stabil mit Dummy/Fallback-Ausgaben.
 
 ## Run
 
@@ -63,11 +72,11 @@ Folgende Versionsfelder werden persistiert:
 Zusätzlich werden LLM-Trace-Events in `logs/llm_traces.jsonl` protokolliert (Task, Prompt-Version, Modell, Hash, Modus).
 
 
-## LLM-Integration (Responses API + Structured Outputs)
+## LLM-Integration (OpenAI Responses API oder lokales Ollama)
 
-- Die LLM-Aufrufe nutzen den OpenAI **Responses API** Endpoint (`/v1/responses`).
-- Für jeden Task ist ein JSON-Schema hinterlegt (z. B. `summary`, `rationale`, `measures[]`).
-- Das LLM liefert schema-konforme JSON-Objekte, die anschließend in Textartefakte für Synthese und Maßnahmen überführt werden.
+- Die LLM-Aufrufe unterstützen OpenAI (**`/v1/responses`**) und optional lokales Ollama (**`/api/generate`**).
+- Für jeden Task werden strukturierte JSON-Ausgaben erwartet (z. B. `summary`, `rationale`, `measures[]`).
+- Das LLM liefert JSON-Objekte, die anschließend in Textartefakte für Synthese und Maßnahmen überführt werden.
 - Reifegrade und Scores bleiben vollständig regelbasiert und deterministisch im Scoring-Code.
 - API und Streamlit erlauben einen optionalen **`llm_api_key`** bzw. ein API-Key-Feld in der Sidebar, um Live-Läufe ohne globale Env-Variable auszuführen.
 

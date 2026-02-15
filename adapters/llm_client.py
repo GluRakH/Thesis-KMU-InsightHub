@@ -14,11 +14,10 @@ import urllib.request
 
 @dataclass
 class LLMClientConfig:
-    provider: str = "auto"
-    model: str = "gpt-4o-mini"
+    model: str = "llama3.1:8b"
     temperature: float = 0.2
     prompt_version: str = "v1"
-    api_url: str = "https://api.openai.com/v1/responses"
+    api_url: str = "http://localhost:11434/api/generate"
     timeout_seconds: float = 20.0
     trace_file: Path = Path("logs/llm_traces.jsonl")
 
@@ -31,18 +30,14 @@ class LLMClient:
         dry_run: bool | None = None,
     ) -> None:
         self.config = config or LLMClientConfig(
-            provider=os.getenv("LLM_PROVIDER", "auto"),
-            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            model=os.getenv("LLM_MODEL", "llama3.1:8b"),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.2")),
             prompt_version=os.getenv("LLM_PROMPT_VERSION", "v1"),
-            api_url=os.getenv("LLM_API_URL", "https://api.openai.com/v1/responses"),
+            api_url=os.getenv("LLM_API_URL", "http://localhost:11434/api/generate"),
             timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "20")),
             trace_file=Path(os.getenv("LLM_TRACE_FILE", "logs/llm_traces.jsonl")),
         )
-        self.provider = self._resolve_provider(self.config.provider, self.config.api_url)
-        if self.provider == "ollama" and self.config.api_url == "https://api.openai.com/v1/responses":
-            self.config.api_url = "http://localhost:11434/api/generate"
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OLLAMA_API_KEY")
+        self.api_key = api_key or os.getenv("OLLAMA_API_KEY") or os.getenv("LLM_API_KEY")
 
         if dry_run is None:
             self.dry_run = os.getenv("LLM_DRY_RUN", "false").lower() == "true"
@@ -121,7 +116,7 @@ class LLMClient:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()
 
-        if self.dry_run or (self._requires_api_key() and not self.api_key):
+        if self.dry_run:
             output = self._dummy_response(task_name, payload)
             self._write_trace(
                 task_name=task_name,
@@ -133,7 +128,7 @@ class LLMClient:
             return output
 
         try:
-            output = self._call_api(task_name, prompt, payload, output_key)
+            output = self._call_api(prompt, payload, output_key)
             self._write_trace(
                 task_name=task_name,
                 timestamp=timestamp,
@@ -154,67 +149,7 @@ class LLMClient:
             )
             return output
 
-    def _call_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
-        if self.provider == "ollama":
-            return self._call_ollama_api(task_name, prompt, payload, output_key)
-
-        return self._call_openai_responses_api(task_name, prompt, payload, output_key)
-
-    def _call_openai_responses_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        body = {
-            "model": self.config.model,
-            "temperature": self.config.temperature,
-            "input": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": (
-                                "Du bist ein Assistenzmodell für nachvollziehbare, datensparsame KMU-Analysen. "
-                                f"{prompt}\n\nINPUT (JSON):\n{json.dumps(payload, ensure_ascii=False)}"
-                            ),
-                        }
-                    ],
-                },
-            ],
-            "text": {
-                "format": {
-                    "type": "json_schema",
-                    "name": f"{task_name}_{self.config.prompt_version}",
-                    "strict": True,
-                    "schema": self._task_schema(task_name),
-                }
-            },
-        }
-
-        request = urllib.request.Request(
-            self.config.api_url,
-            data=json.dumps(body).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
-
-        try:
-            with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
-                response_payload = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"LLM API HTTP {exc.code}: {detail}") from exc
-        parsed_payload = self._extract_response_payload(response_payload)
-        if output_key not in parsed_payload:
-            raise RuntimeError(f"Responses API lieferte kein Feld '{output_key}'.")
-
-        field = parsed_payload[output_key]
-        if isinstance(field, str):
-            return field.strip()
-        return json.dumps(field, ensure_ascii=False)
-
-    def _call_ollama_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
+    def _call_api(self, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -258,68 +193,6 @@ class LLMClient:
         if isinstance(field, str):
             return field.strip()
         return json.dumps(field, ensure_ascii=False)
-
-    @staticmethod
-    def _resolve_provider(provider: str, api_url: str) -> str:
-        normalized = provider.strip().lower()
-        if normalized in {"openai", "ollama"}:
-            return normalized
-        if "11434" in api_url or "/api/generate" in api_url:
-            return "ollama"
-        return "openai"
-
-    def _requires_api_key(self) -> bool:
-        return self.provider == "openai"
-
-    @staticmethod
-    def _task_schema(task_name: str) -> dict[str, Any]:
-        if task_name == "summarize_use_case":
-            return {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["summary"],
-                "properties": {"summary": {"type": "string"}},
-            }
-        if task_name == "generate_assessment_rationale":
-            return {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["rationale"],
-                "properties": {"rationale": {"type": "string"}},
-            }
-        if task_name == "draft_measures":
-            return {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["measures"],
-                "properties": {
-                    "measures": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 1,
-                    }
-                },
-            }
-        return {
-            "type": "object",
-            "additionalProperties": False,
-            "required": ["text"],
-            "properties": {"text": {"type": "string"}},
-        }
-
-    @staticmethod
-    def _extract_response_payload(response_payload: dict[str, Any]) -> dict[str, Any]:
-        output_text = response_payload.get("output_text")
-        if isinstance(output_text, str) and output_text.strip():
-            return json.loads(output_text)
-
-        for output_item in response_payload.get("output", []):
-            for content in output_item.get("content", []):
-                text = content.get("text")
-                if isinstance(text, str) and text.strip():
-                    return json.loads(text)
-
-        raise RuntimeError("Responses API lieferte keinen parsebaren Textinhalt.")
 
     def _write_trace(
         self,

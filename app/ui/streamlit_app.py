@@ -55,7 +55,7 @@ def _init_state() -> None:
         "validation": None,
         "pipeline": None,
         "selection_editor": [],
-        "openai_api_key": "",
+        "ollama_api_key": "",
         "use_llm_texts": False,
     }
     for key, value in defaults.items():
@@ -63,7 +63,7 @@ def _init_state() -> None:
 
 
 def _build_llm_client() -> LLMClient:
-    api_key = st.session_state.get("openai_api_key", "").strip()
+    api_key = st.session_state.get("ollama_api_key", "").strip()
     if api_key:
         return LLMClient(api_key=api_key, dry_run=False)
     return LLMClient()
@@ -73,10 +73,10 @@ def _render_llm_settings() -> None:
     with st.sidebar:
         st.markdown("### LLM Einstellungen")
         st.text_input(
-            "OpenAI API Key",
+            "Ollama API Key",
             type="password",
-            key="openai_api_key",
-            help="Optional: Für Live-Antworten via OpenAI Responses API.",
+            key="ollama_api_key",
+            help="Optional: Für abgesicherte lokale Ollama-Instanzen.",
         )
         st.toggle("LLM-Texte für Maßnahmen nutzen", key="use_llm_texts")
 

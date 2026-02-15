@@ -51,11 +51,11 @@ class SaveAnswerSetRequest(BaseModel):
 
 class RunRecommendationsRequest(BaseModel):
     use_llm_texts: bool = Field(default=False)
-    llm_api_key: str | None = Field(default=None, description="Optionaler OpenAI API Key")
+    ollama_api_key: str | None = Field(default=None, description="Optionaler Ollama API Key")
 
 
 class RunSynthesisRequest(BaseModel):
-    llm_api_key: str | None = Field(default=None, description="Optionaler OpenAI API Key")
+    ollama_api_key: str | None = Field(default=None, description="Optionaler Ollama API Key")
 
 
 class FinalizeMeasureSelection(BaseModel):
@@ -205,8 +205,8 @@ def run_assessments(answer_set_id: str) -> dict[str, Any]:
 
 @app.post("/synthesis/{answer_set_id}")
 def run_synthesis(answer_set_id: str, request: RunSynthesisRequest | None = None) -> dict[str, Any]:
-    llm_api_key = request.llm_api_key if request else None
-    llm_client = LLMClient(api_key=llm_api_key, dry_run=False) if llm_api_key else LLMClient()
+    ollama_api_key = request.ollama_api_key if request else None
+    llm_client = LLMClient(api_key=ollama_api_key, dry_run=False) if ollama_api_key else LLMClient()
     synthesis_service_with_config = SynthesisService(llm_client=llm_client)
 
     with session_factory() as session:
@@ -224,7 +224,7 @@ def run_synthesis(answer_set_id: str, request: RunSynthesisRequest | None = None
 
 @app.post("/catalog/{answer_set_id}")
 def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[str, Any]:
-    llm_client = LLMClient(api_key=request.llm_api_key, dry_run=False) if request.llm_api_key else LLMClient(dry_run=True)
+    llm_client = LLMClient(api_key=request.ollama_api_key, dry_run=False) if request.ollama_api_key else LLMClient()
     recommendation_service_with_config = RecommendationService(llm_client=llm_client)
 
     with session_factory() as session:

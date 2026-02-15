@@ -210,7 +210,7 @@ class PersistenceRepository:
             model_version=payload["model_version"],
             prompt_version=payload["prompt_version"],
             created_at=payload["created_at"],
-            details={},
+            details={"measure_count": len(catalog.measures), "synthesis_id": payload.get("synthesis_id", "")},
         )
         self.session.add(catalog_entity)
 
@@ -226,7 +226,13 @@ class PersistenceRepository:
                     model_version=measure_payload["model_version"],
                     prompt_version=measure_payload["prompt_version"],
                     created_at=measure_payload["created_at"],
-                    details={},
+                    details={
+                        "dimension": measure_payload.get("dimension", ""),
+                        "maturity_label": measure_payload.get("maturity_label", ""),
+                        "impact": measure_payload.get("impact", 1),
+                        "effort": measure_payload.get("effort", 1),
+                        "suggested_priority": measure_payload.get("suggested_priority", 1),
+                    },
                 )
             )
 
@@ -242,10 +248,33 @@ class PersistenceRepository:
                 model_version=payload["model_version"],
                 prompt_version=payload["prompt_version"],
                 created_at=payload["created_at"],
-                details={},
+                details={
+                    "catalog_id": payload.get("catalog_id", ""),
+                    "final_priority": payload.get("final_priority", {}),
+                },
             )
         )
         self.session.commit()
+
+    def load_latest_synthesis_for_answer_set(self, answer_set_id: str) -> Synthesis | None:
+        entities = self.session.scalars(select(SynthesisEntity).order_by(SynthesisEntity.created_at.desc())).all()
+        for entity in entities:
+            if entity.details.get("answer_set_id") != answer_set_id:
+                continue
+            return Synthesis(
+                synthesis_id=entity.synthesis_id,
+                answer_set_id=entity.details.get("answer_set_id", ""),
+                bi_assessment_id=entity.bi_assessment_id,
+                pa_assessment_id=entity.pa_assessment_id,
+                combined_summary=entity.details.get("combined_summary", ""),
+                priority_focus=entity.details.get("priority_focus", ""),
+                heuristic_reason=entity.details.get("heuristic_reason", ""),
+                recommendation=entity.recommendation,
+                model_version=entity.model_version,
+                prompt_version=entity.prompt_version,
+                created_at=entity.created_at,
+            )
+        return None
 
 
 def load_catalog(session: Session, catalog_id: str) -> MeasureCatalog | None:
@@ -259,6 +288,11 @@ def load_catalog(session: Session, catalog_id: str) -> MeasureCatalog | None:
             title=measure.title,
             description=measure.description,
             category=measure.category,
+            dimension=measure.details.get("dimension", ""),
+            maturity_label=measure.details.get("maturity_label", ""),
+            impact=measure.details.get("impact", 1),
+            effort=measure.details.get("effort", 1),
+            suggested_priority=measure.details.get("suggested_priority", 1),
             model_version=measure.model_version,
             prompt_version=measure.prompt_version,
             created_at=measure.created_at,
@@ -269,6 +303,7 @@ def load_catalog(session: Session, catalog_id: str) -> MeasureCatalog | None:
         catalog_id=entity.catalog_id,
         title=entity.title,
         status=entity.status,
+        synthesis_id=entity.details.get("synthesis_id", ""),
         measures=measures,
         model_version=entity.model_version,
         prompt_version=entity.prompt_version,

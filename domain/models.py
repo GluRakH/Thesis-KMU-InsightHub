@@ -109,16 +109,24 @@ class Measure(VersionedModel):
     title: str
     description: str
     category: MeasureCategory
+    dimension: str = Field(default="")
+    maturity_label: str = Field(default="")
+    impact: int = Field(default=1, ge=1, le=5)
+    effort: int = Field(default=1, ge=1, le=5)
+    suggested_priority: int = Field(default=1, ge=1)
 
 
 class MeasureCatalog(VersionedModel):
     catalog_id: str
     title: str
     status: CatalogStatus
+    synthesis_id: str = Field(default="")
     measures: list[Measure] = Field(default_factory=list)
 
 
 class UserSelection(VersionedModel):
     user_selection_id: str
     synthesis_id: str
+    catalog_id: str = Field(default="")
     selected_measure_ids: list[str] = Field(default_factory=list)
+    final_priority: dict[str, int] = Field(default_factory=dict)

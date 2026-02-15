@@ -95,6 +95,35 @@ class QuestionnaireApiTestCase(unittest.TestCase):
         self.assertIn("maturity_level", payload["bi_assessment"])
         self.assertIn("maturity_level", payload["pa_assessment"])
 
+    def test_run_synthesis_route(self) -> None:
+        response = self.client.get("/questionnaire", params={"version": "v1.0"})
+        questionnaire = response.json()
+        answers: dict[str, object] = {}
+        for question in questionnaire["questions"]:
+            if not question.get("required"):
+                continue
+            if question["type"] == "TEXT":
+                answers[question["id"]] = "Test"
+            elif question["type"] == "SINGLE_CHOICE":
+                answers[question["id"]] = question["options"][0]
+            elif question["type"] == "MULTI_CHOICE":
+                answers[question["id"]] = [question["options"][0]]
+            elif question["type"] == "SCALE":
+                answers[question["id"]] = question["scale"]["min"]
+
+        run_assessment = self.client.post("/assessments/run", json={"version": "v1.0", "answers": answers})
+        self.assertEqual(run_assessment.status_code, 200)
+
+        answer_set_id = run_assessment.json()["answer_set_id"]
+        run_synthesis = self.client.post("/synthesis/run", json={"answer_set_id": answer_set_id})
+
+        self.assertEqual(run_synthesis.status_code, 200)
+        payload = run_synthesis.json()
+        self.assertEqual(payload["answer_set_id"], answer_set_id)
+        self.assertIn("combined_summary", payload)
+        self.assertIn("priority_focus", payload)
+
+
 
 
 if __name__ == "__main__":

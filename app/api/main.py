@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.services.assessment_service import AssessmentService
 from app.services.questionnaire_service import QuestionnaireService
+from app.services.synthesis_service import SynthesisService
 from domain.models import Answer, AnswerSet, AnswerSetStatus, UseCase, UseCaseType
 from persistence.database import Base, create_sqlite_engine, create_session_factory
 from persistence.repositories import PersistenceRepository
@@ -16,6 +17,7 @@ from persistence.repositories import PersistenceRepository
 app = FastAPI(title="InsightHub API")
 questionnaire_service = QuestionnaireService()
 assessment_service = AssessmentService()
+synthesis_service = SynthesisService()
 
 engine = create_sqlite_engine()
 Base.metadata.create_all(engine)
@@ -26,6 +28,11 @@ class ValidateAnswerSetRequest(BaseModel):
     version: str = Field(default="v1.0")
     answers: dict[str, Any] = Field(default_factory=dict)
 
+
+
+
+class RunSynthesisRequest(BaseModel):
+    answer_set_id: str
 
 class RunAssessmentsRequest(BaseModel):
     version: str = Field(default="v1.0")
@@ -107,3 +114,18 @@ def run_assessments(request: RunAssessmentsRequest) -> dict[str, Any]:
         "bi_assessment": bi_assessment.model_dump(),
         "pa_assessment": pa_assessment.model_dump(),
     }
+
+
+@app.post("/synthesis/run")
+def run_synthesis(request: RunSynthesisRequest) -> dict[str, Any]:
+    with session_factory() as session:
+        repository = PersistenceRepository(session)
+        assessments = repository.load_assessments_for_answer_set(request.answer_set_id)
+        if assessments is None:
+            raise HTTPException(status_code=404, detail="Keine gespeicherten Assessments für answer_set_id gefunden.")
+
+        bi_assessment, pa_assessment = assessments
+        synthesis = synthesis_service.synthesize(bi_assessment, pa_assessment)
+        repository.save_synthesis(synthesis)
+
+    return synthesis.model_dump()

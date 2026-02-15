@@ -9,15 +9,17 @@ from pydantic import BaseModel, Field
 
 from app.services.assessment_service import AssessmentService
 from app.services.questionnaire_service import QuestionnaireService
+from app.services.recommendation_service import RecommendationService
 from app.services.synthesis_service import SynthesisService
-from domain.models import Answer, AnswerSet, AnswerSetStatus, UseCase, UseCaseType
+from domain.models import Answer, AnswerSet, AnswerSetStatus, UseCase, UseCaseType, UserSelection
 from persistence.database import Base, create_sqlite_engine, create_session_factory
-from persistence.repositories import PersistenceRepository
+from persistence.repositories import PersistenceRepository, load_catalog
 
 app = FastAPI(title="InsightHub API")
 questionnaire_service = QuestionnaireService()
 assessment_service = AssessmentService()
 synthesis_service = SynthesisService()
+recommendation_service = RecommendationService()
 
 engine = create_sqlite_engine()
 Base.metadata.create_all(engine)
@@ -33,6 +35,22 @@ class ValidateAnswerSetRequest(BaseModel):
 
 class RunSynthesisRequest(BaseModel):
     answer_set_id: str
+
+
+class RunRecommendationsRequest(BaseModel):
+    answer_set_id: str
+    use_llm_texts: bool = Field(default=False)
+
+
+class FinalizeMeasureSelection(BaseModel):
+    measure_id: str
+    selected: bool = Field(default=True)
+    final_priority: int | None = Field(default=None, ge=1)
+
+
+class FinalizeRecommendationsRequest(BaseModel):
+    selections: list[FinalizeMeasureSelection] = Field(default_factory=list)
+
 
 class RunAssessmentsRequest(BaseModel):
     version: str = Field(default="v1.0")
@@ -129,3 +147,62 @@ def run_synthesis(request: RunSynthesisRequest) -> dict[str, Any]:
         repository.save_synthesis(synthesis)
 
     return synthesis.model_dump()
+
+
+@app.post("/recommendations/run")
+def run_recommendations(request: RunRecommendationsRequest) -> dict[str, Any]:
+    with session_factory() as session:
+        repository = PersistenceRepository(session)
+        assessments = repository.load_assessments_for_answer_set(request.answer_set_id)
+        if assessments is None:
+            raise HTTPException(status_code=404, detail="Keine gespeicherten Assessments für answer_set_id gefunden.")
+
+        bi_assessment, pa_assessment = assessments
+        synthesis = repository.load_latest_synthesis_for_answer_set(request.answer_set_id)
+        if synthesis is None:
+            synthesis = synthesis_service.synthesize(bi_assessment, pa_assessment)
+            repository.save_synthesis(synthesis)
+
+        catalog = recommendation_service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label=bi_assessment.level_label,
+            pa_maturity_label=pa_assessment.level_label,
+            bi_dimension_scores=bi_assessment.dimension_scores,
+            pa_dimension_scores=pa_assessment.dimension_scores,
+            use_llm_texts=request.use_llm_texts,
+        )
+        repository.save_catalog(catalog)
+
+    return catalog.model_dump()
+
+
+@app.post("/recommendations/{catalog_id}/finalize")
+def finalize_recommendations(catalog_id: str, request: FinalizeRecommendationsRequest) -> dict[str, Any]:
+    with session_factory() as session:
+        catalog = load_catalog(session, catalog_id)
+        if catalog is None:
+            raise HTTPException(status_code=404, detail="Maßnahmenkatalog nicht gefunden.")
+
+        selection_map = {entry.measure_id: entry for entry in request.selections}
+        selected_measure_ids = [
+            measure.measure_id
+            for measure in catalog.measures
+            if selection_map.get(measure.measure_id, FinalizeMeasureSelection(measure_id=measure.measure_id)).selected
+        ]
+        final_priority = {
+            entry.measure_id: entry.final_priority
+            for entry in request.selections
+            if entry.selected and entry.final_priority is not None
+        }
+
+        repository = PersistenceRepository(session)
+        selection = UserSelection(
+            user_selection_id=f"sel-{uuid4().hex[:12]}",
+            synthesis_id=catalog.synthesis_id,
+            catalog_id=catalog_id,
+            selected_measure_ids=selected_measure_ids,
+            final_priority=final_priority,
+        )
+        repository.save_user_selection(selection)
+
+    return selection.model_dump()

@@ -7,6 +7,7 @@ from uuid import uuid4
 import streamlit as st
 from sqlalchemy import select
 
+from adapters.llm_client import LLMClient
 from app.services.assessment_service import AssessmentService
 from app.services.questionnaire_service import QuestionType, QuestionnaireService
 from app.services.recommendation_service import RecommendationService
@@ -39,8 +40,6 @@ session_factory = create_session_factory()
 
 questionnaire_service = QuestionnaireService()
 assessment_service = AssessmentService()
-synthesis_service = SynthesisService()
-recommendation_service = RecommendationService()
 
 
 STEP_ORDER = ["Start", "Fragebogen", "Ergebnisse", "Maßnahmen", "Export"]
@@ -56,9 +55,30 @@ def _init_state() -> None:
         "validation": None,
         "pipeline": None,
         "selection_editor": [],
+        "openai_api_key": "",
+        "use_llm_texts": False,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
+
+
+def _build_llm_client() -> LLMClient:
+    api_key = st.session_state.get("openai_api_key", "").strip()
+    if api_key:
+        return LLMClient(api_key=api_key, dry_run=False)
+    return LLMClient()
+
+
+def _render_llm_settings() -> None:
+    with st.sidebar:
+        st.markdown("### LLM Einstellungen")
+        st.text_input(
+            "OpenAI API Key",
+            type="password",
+            key="openai_api_key",
+            help="Optional: Für Live-Antworten via OpenAI Responses API.",
+        )
+        st.toggle("LLM-Texte für Maßnahmen nutzen", key="use_llm_texts")
 
 
 
@@ -137,7 +157,7 @@ def _run_pipeline(answer_set_id: str, version: str) -> PipelineResult:
 
     bi_assessment = assessment_service.compute_bi_assessment(answer_set_id, answers, version)
     pa_assessment = assessment_service.compute_pa_assessment(answer_set_id, answers, version)
-    synthesis = synthesis_service.synthesize(bi_assessment, pa_assessment)
+    synthesis = SynthesisService(llm_client=_build_llm_client()).synthesize(bi_assessment, pa_assessment)
 
     with session_factory() as session:
         repository = PersistenceRepository(session)
@@ -401,13 +421,13 @@ def _render_measures() -> None:
             st.error("Synthesis konnte nicht geladen werden. Bitte Ergebnisse neu berechnen.")
             return
 
-        catalog = recommendation_service.generate_catalog(
+        catalog = RecommendationService(llm_client=_build_llm_client()).generate_catalog(
             synthesis=synthesis_model,
             bi_maturity_label=pipeline["bi"]["level_label"],
             pa_maturity_label=pipeline["pa"]["level_label"],
             bi_dimension_scores=pipeline["bi"]["dimension_scores"],
             pa_dimension_scores=pipeline["pa"]["dimension_scores"],
-            use_llm_texts=False,
+            use_llm_texts=st.session_state.get("use_llm_texts", False),
         )
 
         with session_factory() as session:
@@ -548,6 +568,7 @@ def _render_export() -> None:
 
 def main() -> None:
     _init_state()
+    _render_llm_settings()
     step = _render_header()
 
     if step == "Start":

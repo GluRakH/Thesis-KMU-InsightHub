@@ -17,7 +17,7 @@ class LLMClientConfig:
     model: str = "gpt-4o-mini"
     temperature: float = 0.2
     prompt_version: str = "v1"
-    api_url: str = "https://api.openai.com/v1/chat/completions"
+    api_url: str = "https://api.openai.com/v1/responses"
     timeout_seconds: float = 20.0
     trace_file: Path = Path("logs/llm_traces.jsonl")
 
@@ -33,7 +33,7 @@ class LLMClient:
             model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.2")),
             prompt_version=os.getenv("LLM_PROMPT_VERSION", "v1"),
-            api_url=os.getenv("LLM_API_URL", "https://api.openai.com/v1/chat/completions"),
+            api_url=os.getenv("LLM_API_URL", "https://api.openai.com/v1/responses"),
             timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "20")),
             trace_file=Path(os.getenv("LLM_TRACE_FILE", "logs/llm_traces.jsonl")),
         )
@@ -59,7 +59,7 @@ class LLMClient:
             "Fasse den Use Case auf Deutsch in 5-7 Sätzen zusammen. "
             "Nenne Ausgangslage, wichtigste BI/PA-Befunde und den erwarteten Nutzen."
         )
-        return self._run_text_task("summarize_use_case", prompt, payload)
+        return self._run_text_task("summarize_use_case", prompt, payload, output_key="summary")
 
     def generate_assessment_rationale(
         self,
@@ -80,7 +80,7 @@ class LLMClient:
             "Erkläre die Bewertung nachvollziehbar auf Deutsch. "
             "Begründe Reifegrad und Score auf Basis der Dimensionen und Findings."
         )
-        return self._run_text_task("generate_assessment_rationale", prompt, payload)
+        return self._run_text_task("generate_assessment_rationale", prompt, payload, output_key="rationale")
 
     def draft_measures(
         self,
@@ -97,13 +97,14 @@ class LLMClient:
             "Erstelle priorisierte, umsetzbare Maßnahmen auf Deutsch. "
             "Gib nur JSON zurück: {\"measures\": [\"...\"]}."
         )
-        content = self._run_text_task("draft_measures", prompt, payload)
+        content = self._run_text_task("draft_measures", prompt, payload, output_key="measures")
 
         try:
-            parsed = json.loads(content)
-            measures = parsed.get("measures", [])
-            if isinstance(measures, list):
-                cleaned = [str(item).strip() for item in measures if str(item).strip()]
+            measures_payload = json.loads(content) if isinstance(content, str) else content
+            if isinstance(measures_payload, dict):
+                measures_payload = measures_payload.get("measures", [])
+            if isinstance(measures_payload, list):
+                cleaned = [str(item).strip() for item in measures_payload if str(item).strip()]
                 if cleaned:
                     return cleaned[:max_measures]
         except json.JSONDecodeError:
@@ -111,7 +112,7 @@ class LLMClient:
 
         return [line.strip("- •\t ") for line in content.splitlines() if line.strip()][:max_measures]
 
-    def _run_text_task(self, task_name: str, prompt: str, payload: dict[str, Any]) -> str:
+    def _run_text_task(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -127,7 +128,7 @@ class LLMClient:
             return output
 
         try:
-            output = self._call_api(prompt, payload)
+            output = self._call_api(task_name, prompt, payload, output_key)
             self._write_trace(
                 task_name=task_name,
                 timestamp=timestamp,
@@ -148,7 +149,7 @@ class LLMClient:
             )
             return output
 
-    def _call_api(self, prompt: str, payload: dict[str, Any]) -> str:
+    def _call_api(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -156,16 +157,28 @@ class LLMClient:
         body = {
             "model": self.config.model,
             "temperature": self.config.temperature,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "Du bist ein Assistenzmodell für nachvollziehbare, datensparsame KMU-Analysen.",
-                },
+            "input": [
                 {
                     "role": "user",
-                    "content": f"{prompt}\n\nINPUT (JSON):\n{json.dumps(payload, ensure_ascii=False)}",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "Du bist ein Assistenzmodell für nachvollziehbare, datensparsame KMU-Analysen. "
+                                f"{prompt}\n\nINPUT (JSON):\n{json.dumps(payload, ensure_ascii=False)}"
+                            ),
+                        }
+                    ],
                 },
             ],
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": f"{task_name}_{self.config.prompt_version}",
+                    "strict": True,
+                    "schema": self._task_schema(task_name),
+                }
+            },
         }
 
         request = urllib.request.Request(
@@ -181,7 +194,64 @@ class LLMClient:
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="ignore")
             raise RuntimeError(f"LLM API HTTP {exc.code}: {detail}") from exc
-        return str(response_payload["choices"][0]["message"]["content"]).strip()
+        parsed_payload = self._extract_response_payload(response_payload)
+        if output_key not in parsed_payload:
+            raise RuntimeError(f"Responses API lieferte kein Feld '{output_key}'.")
+
+        field = parsed_payload[output_key]
+        if isinstance(field, str):
+            return field.strip()
+        return json.dumps(field, ensure_ascii=False)
+
+    @staticmethod
+    def _task_schema(task_name: str) -> dict[str, Any]:
+        if task_name == "summarize_use_case":
+            return {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["summary"],
+                "properties": {"summary": {"type": "string"}},
+            }
+        if task_name == "generate_assessment_rationale":
+            return {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["rationale"],
+                "properties": {"rationale": {"type": "string"}},
+            }
+        if task_name == "draft_measures":
+            return {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["measures"],
+                "properties": {
+                    "measures": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 1,
+                    }
+                },
+            }
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["text"],
+            "properties": {"text": {"type": "string"}},
+        }
+
+    @staticmethod
+    def _extract_response_payload(response_payload: dict[str, Any]) -> dict[str, Any]:
+        output_text = response_payload.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return json.loads(output_text)
+
+        for output_item in response_payload.get("output", []):
+            for content in output_item.get("content", []):
+                text = content.get("text")
+                if isinstance(text, str) and text.strip():
+                    return json.loads(text)
+
+        raise RuntimeError("Responses API lieferte keinen parsebaren Textinhalt.")
 
     def _write_trace(
         self,

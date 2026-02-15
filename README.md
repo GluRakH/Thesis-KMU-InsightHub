@@ -17,6 +17,13 @@ export LLM_DRY_RUN=true
 export LLM_TRACE_FILE=logs/llm_traces.jsonl
 ```
 
+Optional für Live-Zugriff auf ChatGPT (Responses API):
+
+```bash
+export OPENAI_API_KEY=sk-...
+export LLM_API_URL=https://api.openai.com/v1/responses
+```
+
 > Ohne `OPENAI_API_KEY` läuft die Demo weiterhin stabil mit Dummy/Fallback-Ausgaben.
 
 ## Run
@@ -54,6 +61,15 @@ Folgende Versionsfelder werden persistiert:
 - **Model-Version / Modellname** (`model_version`, `llm_model`)
 
 Zusätzlich werden LLM-Trace-Events in `logs/llm_traces.jsonl` protokolliert (Task, Prompt-Version, Modell, Hash, Modus).
+
+
+## LLM-Integration (Responses API + Structured Outputs)
+
+- Die LLM-Aufrufe nutzen den OpenAI **Responses API** Endpoint (`/v1/responses`).
+- Für jeden Task ist ein JSON-Schema hinterlegt (z. B. `summary`, `rationale`, `measures[]`).
+- Das LLM liefert schema-konforme JSON-Objekte, die anschließend in Textartefakte für Synthese und Maßnahmen überführt werden.
+- Reifegrade und Scores bleiben vollständig regelbasiert und deterministisch im Scoring-Code.
+- API und Streamlit erlauben einen optionalen **`llm_api_key`** bzw. ein API-Key-Feld in der Sidebar, um Live-Läufe ohne globale Env-Variable auszuführen.
 
 ## Qualität / Tests
 

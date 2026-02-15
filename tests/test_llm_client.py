@@ -2,8 +2,23 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from adapters.llm_client import LLMClient, LLMClientConfig
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict) -> None:
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return json.dumps(self._payload).encode("utf-8")
+
+    def __enter__(self) -> "_FakeResponse":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
 
 
 class LLMClientTestCase(unittest.TestCase):
@@ -33,6 +48,32 @@ class LLMClientTestCase(unittest.TestCase):
 
             self.assertEqual(len(measures), 2)
             self.assertTrue(all(isinstance(item, str) for item in measures))
+
+    @patch("urllib.request.urlopen")
+    def test_call_api_uses_responses_schema(self, mocked_urlopen) -> None:
+        captured_request = {}
+
+        def _fake_open(request, timeout=None):
+            captured_request["url"] = request.full_url
+            captured_request["body"] = json.loads(request.data.decode("utf-8"))
+            captured_request["headers"] = dict(request.header_items())
+            captured_request["timeout"] = timeout
+            return _FakeResponse({"output_text": '{"summary":"Fertig."}'})
+
+        mocked_urlopen.side_effect = _fake_open
+
+        client = LLMClient(
+            config=LLMClientConfig(trace_file=Path(tempfile.gettempdir()) / "trace.jsonl"),
+            api_key="sk-test",
+            dry_run=False,
+        )
+
+        summary = client.summarize_use_case("Kontext", {"d": "x"}, {"p": "y"})
+
+        self.assertEqual(summary, "Fertig.")
+        self.assertTrue(captured_request["url"].endswith("/v1/responses"))
+        self.assertEqual(captured_request["body"]["text"]["format"]["type"], "json_schema")
+        self.assertEqual(captured_request["body"]["text"]["format"]["schema"]["required"], ["summary"])
 
 
 if __name__ == "__main__":

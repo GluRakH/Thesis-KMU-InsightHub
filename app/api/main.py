@@ -12,6 +12,7 @@ from app.services.assessment_service import AssessmentService
 from app.services.questionnaire_service import QuestionnaireService
 from app.services.recommendation_service import RecommendationService
 from app.services.synthesis_service import SynthesisService
+from adapters.llm_client import LLMClient
 from domain.models import Answer, AnswerSet, AnswerSetStatus, UseCase, UseCaseType, UserSelection
 from persistence.database import Base, create_sqlite_engine, create_session_factory
 from persistence.entities import (
@@ -28,8 +29,6 @@ from persistence.repositories import PersistenceRepository, load_catalog
 app = FastAPI(title="InsightHub API")
 questionnaire_service = QuestionnaireService()
 assessment_service = AssessmentService()
-synthesis_service = SynthesisService()
-recommendation_service = RecommendationService()
 
 engine = create_sqlite_engine()
 Base.metadata.create_all(engine)
@@ -52,6 +51,11 @@ class SaveAnswerSetRequest(BaseModel):
 
 class RunRecommendationsRequest(BaseModel):
     use_llm_texts: bool = Field(default=False)
+    llm_api_key: str | None = Field(default=None, description="Optionaler OpenAI API Key")
+
+
+class RunSynthesisRequest(BaseModel):
+    llm_api_key: str | None = Field(default=None, description="Optionaler OpenAI API Key")
 
 
 class FinalizeMeasureSelection(BaseModel):
@@ -200,7 +204,11 @@ def run_assessments(answer_set_id: str) -> dict[str, Any]:
 
 
 @app.post("/synthesis/{answer_set_id}")
-def run_synthesis(answer_set_id: str) -> dict[str, Any]:
+def run_synthesis(answer_set_id: str, request: RunSynthesisRequest | None = None) -> dict[str, Any]:
+    llm_api_key = request.llm_api_key if request else None
+    llm_client = LLMClient(api_key=llm_api_key, dry_run=False) if llm_api_key else LLMClient()
+    synthesis_service_with_config = SynthesisService(llm_client=llm_client)
+
     with session_factory() as session:
         repository = PersistenceRepository(session)
         assessments = repository.load_assessments_for_answer_set(answer_set_id)
@@ -208,7 +216,7 @@ def run_synthesis(answer_set_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail="Keine gespeicherten Assessments für answer_set_id gefunden.")
 
         bi_assessment, pa_assessment = assessments
-        synthesis = synthesis_service.synthesize(bi_assessment, pa_assessment)
+        synthesis = synthesis_service_with_config.synthesize(bi_assessment, pa_assessment)
         repository.save_synthesis(synthesis)
 
     return synthesis.model_dump()
@@ -216,6 +224,9 @@ def run_synthesis(answer_set_id: str) -> dict[str, Any]:
 
 @app.post("/catalog/{answer_set_id}")
 def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[str, Any]:
+    llm_client = LLMClient(api_key=request.llm_api_key, dry_run=False) if request.llm_api_key else LLMClient(dry_run=True)
+    recommendation_service_with_config = RecommendationService(llm_client=llm_client)
+
     with session_factory() as session:
         repository = PersistenceRepository(session)
         assessments = repository.load_assessments_for_answer_set(answer_set_id)
@@ -225,10 +236,10 @@ def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[
         bi_assessment, pa_assessment = assessments
         synthesis = repository.load_latest_synthesis_for_answer_set(answer_set_id)
         if synthesis is None:
-            synthesis = synthesis_service.synthesize(bi_assessment, pa_assessment)
+            synthesis = SynthesisService(llm_client=llm_client).synthesize(bi_assessment, pa_assessment)
             repository.save_synthesis(synthesis)
 
-        catalog = recommendation_service.generate_catalog(
+        catalog = recommendation_service_with_config.generate_catalog(
             synthesis=synthesis,
             bi_maturity_label=bi_assessment.level_label,
             pa_maturity_label=pa_assessment.level_label,

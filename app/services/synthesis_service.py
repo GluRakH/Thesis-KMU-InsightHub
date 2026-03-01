@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import uuid4
 
 from adapters.llm_client import LLMClient
@@ -17,7 +18,13 @@ class SynthesisService:
     def __init__(self, llm_client: LLMClient | None = None) -> None:
         self._llm_client = llm_client or LLMClient()
 
-    def synthesize(self, bi_assessment: BIAssessment, pa_assessment: PAAssessment) -> Synthesis:
+    def synthesize(
+        self,
+        bi_assessment: BIAssessment,
+        pa_assessment: PAAssessment,
+        context_answers: dict[str, Any] | None = None,
+    ) -> Synthesis:
+        answers = context_answers or {}
         heuristic = self._resolve_dependency_heuristic(bi_assessment, pa_assessment)
         combined_summary = self._build_combined_summary(bi_assessment, pa_assessment)
 
@@ -38,6 +45,10 @@ class SynthesisService:
             },
         )
 
+        target_objectives = self._extract_target_objectives(answers)
+        context_restrictions = self._extract_context_restrictions(answers)
+        context_factors = self._resolve_context_factors(answers)
+
         recommendation = (
             f"{heuristic.priority_focus}. {heuristic.reason} "
             "Nutze 90-Tage-Meilensteine und überprüfe monatlich die KPI-Wirkung."
@@ -51,11 +62,14 @@ class SynthesisService:
             combined_summary=f"{combined_summary} {llm_summary}".strip(),
             priority_focus=heuristic.priority_focus,
             heuristic_reason=heuristic.reason,
+            target_objectives=target_objectives,
+            context_restrictions=context_restrictions,
+            context_factors=context_factors,
             questionnaire_version=bi_assessment.questionnaire_version,
             scoring_version=bi_assessment.scoring_version,
             llm_model=self._llm_client.config.model,
             llm_prompt_version=self._llm_client.config.prompt_version,
-            model_version="synthesis-rules-v1",
+            model_version="synthesis-rules-v2",
             prompt_version=self._llm_client.config.prompt_version,
             recommendation=recommendation,
         )
@@ -76,7 +90,7 @@ class SynthesisService:
         bi_assessment: BIAssessment,
         pa_assessment: PAAssessment,
     ) -> SynthesisHeuristicResult:
-        if bi_assessment.score <= 2.0 and pa_assessment.score >= 3.0:
+        if bi_assessment.score <= 40 and pa_assessment.score >= 60:
             return SynthesisHeuristicResult(
                 priority_focus="Fokus zuerst auf Datenfundament und KPI-Steuerung",
                 reason=(
@@ -85,7 +99,7 @@ class SynthesisService:
                 ),
             )
 
-        if pa_assessment.score <= 2.0 and bi_assessment.score >= 3.0:
+        if pa_assessment.score <= 40 and bi_assessment.score >= 60:
             return SynthesisHeuristicResult(
                 priority_focus="Fokus zuerst auf Prozessstandardisierung und Automatisierungsfähigkeit",
                 reason=(
@@ -101,6 +115,29 @@ class SynthesisService:
                 "und verbessert Time-to-Value"
             ),
         )
+
+    @staticmethod
+    def _extract_target_objectives(answers: dict[str, Any]) -> list[str]:
+        values = answers.get("SYN_03")
+        if isinstance(values, list):
+            return [str(item) for item in values]
+        return []
+
+    @staticmethod
+    def _extract_context_restrictions(answers: dict[str, Any]) -> list[str]:
+        restriction = answers.get("SYN_02")
+        if isinstance(restriction, str) and restriction:
+            return [restriction]
+        return []
+
+    @staticmethod
+    def _resolve_context_factors(answers: dict[str, Any]) -> dict[str, float]:
+        factors = {"GLOBAL": 1.0}
+        if answers.get("SYN_02") == "Budget sehr begrenzt":
+            factors["GLOBAL"] = 0.8
+        if answers.get("SYN_02") == "Zeitdruck/kurzer Zeithorizont":
+            factors["GLOBAL"] = 1.2
+        return factors
 
     @staticmethod
     def _lowest_dimension(dimension_scores: dict[str, float]) -> str:

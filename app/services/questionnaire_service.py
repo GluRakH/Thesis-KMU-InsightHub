@@ -145,25 +145,25 @@ class QuestionnaireService:
     def _consistency_checks(self, answer_set: dict[str, Any]) -> list[ValidationIssue]:
         issues: list[ValidationIssue] = []
 
-        # Beispielcheck 1: hohe Kritikalität bei sehr niedriger Risikotoleranz
-        if isinstance(answer_set.get("CTX_04"), (int, float)) and isinstance(answer_set.get("SYN_03"), (int, float)):
-            if answer_set["CTX_04"] >= 4 and answer_set["SYN_03"] <= 2:
+        # Hohe Governance-Reife bei gleichzeitig fehlender End-to-End-Verantwortung prüfen.
+        if isinstance(answer_set.get("DA_03"), (int, float)) and isinstance(answer_set.get("COUP_03"), (int, float)):
+            if answer_set["DA_03"] >= 4 and answer_set["COUP_03"] <= 2:
                 issues.append(
                     self._issue(
-                        "SYN_03",
+                        "COUP_03",
                         "CONSISTENCY_WARNING",
-                        "Hohe Prozesskritikalität bei niedriger Risikotoleranz sollte geprüft werden.",
+                        "Hohe BI-Standardisierung bei niedriger End-to-End-Verantwortung sollte geprüft werden.",
                     )
                 )
 
-        # Beispielcheck 2: starker Standardisierungsgrad bei gleichzeitig sehr vielen Ausnahmen
-        if isinstance(answer_set.get("PA_02"), (int, float)) and answer_set.get("PA_03") == "Sehr häufig":
-            if answer_set["PA_02"] >= 4:
+        # Hohe Automatisierungs-Skalierung bei niedriger Change-Bereitschaft prüfen.
+        if isinstance(answer_set.get("PA_08"), (int, float)) and isinstance(answer_set.get("PA_02"), (int, float)):
+            if answer_set["PA_08"] >= 4 and answer_set["PA_02"] <= 2:
                 issues.append(
                     self._issue(
-                        "PA_03",
+                        "PA_08",
                         "CONSISTENCY_WARNING",
-                        "Hohe Standardisierung widerspricht sehr häufigen Ausnahmen.",
+                        "Geplante Skalierung steht im Widerspruch zu niedriger organisatorischer Readiness.",
                     )
                 )
 

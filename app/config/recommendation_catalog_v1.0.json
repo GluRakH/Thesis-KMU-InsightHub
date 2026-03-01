@@ -1,94 +1,391 @@
 {
-  "version": "v1.0",
+  "version": "v2.0",
   "dimension_level_mapping": {
     "BI_D1": {
-      "LOW": [
-        {
-          "title": "Datenquellen konsolidieren und Qualitätsregeln etablieren",
-          "category": "data",
-          "impact": 5,
-          "effort": 3,
-          "description_template": "Erstelle ein priorisiertes Dateninventar, definiere Qualitätsregeln und benenne Data Owner pro Kernobjekt."
-        },
-        {
-          "title": "Master-Datenmodell für KPI-relevante Entitäten aufbauen",
-          "category": "technical",
-          "impact": 4,
-          "effort": 4,
-          "description_template": "Standardisiere Kunden-, Produkt- und Prozessdaten, um Reporting und Automatisierung auf konsistenter Basis zu betreiben."
-        }
-      ],
-      "MED": [
-        {
-          "title": "Datenqualitätsmonitoring automatisieren",
-          "category": "data",
-          "impact": 4,
-          "effort": 2,
-          "description_template": "Führe tägliche Checks für Vollständigkeit und Aktualität ein und eskaliere Abweichungen über definierte Schwellenwerte."
-        }
-      ]
+      "L1": {
+        "title": "Fundament schaffen: BI_D1",
+        "category": "governance",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in BI_D1 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: BI_D1",
+        "category": "governance",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in BI_D1 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: BI_D1",
+        "category": "governance",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in BI_D1 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: BI_D1",
+        "category": "governance",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in BI_D1 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
     },
     "BI_D2": {
-      "LOW": [
-        {
-          "title": "KPI-Governance mit eindeutiger Ownership etablieren",
-          "category": "governance",
-          "impact": 5,
-          "effort": 2,
-          "description_template": "Definiere KPI-Katalog, Zielwerte und Verantwortlichkeiten pro KPI inklusive Review-Rhythmus."
-        }
-      ],
-      "MED": [
-        {
-          "title": "Review-Board für KPI-Änderungen einführen",
-          "category": "organizational",
-          "impact": 3,
-          "effort": 2,
-          "description_template": "Etabliere ein monatliches Board, das KPI-Definitionen, Datenqualität und Maßnahmenwirkung gemeinsam bewertet."
-        }
-      ]
+      "L1": {
+        "title": "Fundament schaffen: BI_D2",
+        "category": "technical",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in BI_D2 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: BI_D2",
+        "category": "technical",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in BI_D2 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: BI_D2",
+        "category": "technical",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in BI_D2 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: BI_D2",
+        "category": "technical",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in BI_D2 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
+    },
+    "BI_D3": {
+      "L1": {
+        "title": "Fundament schaffen: BI_D3",
+        "category": "organizational",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in BI_D3 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: BI_D3",
+        "category": "organizational",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in BI_D3 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: BI_D3",
+        "category": "organizational",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in BI_D3 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: BI_D3",
+        "category": "organizational",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in BI_D3 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
     },
     "PA_D1": {
-      "LOW": [
-        {
-          "title": "Prozessvarianten reduzieren und Soll-Prozess definieren",
-          "category": "organizational",
-          "impact": 5,
-          "effort": 3,
-          "description_template": "Dokumentiere den End-to-End-Prozess, identifiziere Ausnahmen und standardisiere kritische Prozessschritte."
-        }
-      ]
+      "L1": {
+        "title": "Fundament schaffen: PA_D1",
+        "category": "governance",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in PA_D1 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: PA_D1",
+        "category": "governance",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in PA_D1 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: PA_D1",
+        "category": "governance",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in PA_D1 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: PA_D1",
+        "category": "governance",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in PA_D1 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
     },
     "PA_D2": {
-      "LOW": [
-        {
-          "title": "Automatisierungskandidaten per Aufwand/Nutzen-Matrix priorisieren",
-          "category": "technical",
-          "impact": 4,
-          "effort": 2,
-          "description_template": "Bewerte Automatisierungskandidaten nach Volumen, Fehlerquote und Integrationsaufwand für eine 90-Tage-Roadmap."
-        }
-      ]
+      "L1": {
+        "title": "Fundament schaffen: PA_D2",
+        "category": "technical",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in PA_D2 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: PA_D2",
+        "category": "technical",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in PA_D2 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: PA_D2",
+        "category": "technical",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in PA_D2 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: PA_D2",
+        "category": "technical",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in PA_D2 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
     },
     "PA_D3": {
-      "LOW": [
-        {
-          "title": "Change-Enablement und Kontrollpunkte verbindlich machen",
-          "category": "governance",
-          "impact": 4,
-          "effort": 3,
-          "description_template": "Definiere Schulungsplan, Kommunikationsmaßnahmen und Governance-Kontrollen zur sicheren Skalierung von Automatisierung."
-        }
-      ]
+      "L1": {
+        "title": "Fundament schaffen: PA_D3",
+        "category": "organizational",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Fundament schaffen",
+        "description_template": "Leite in PA_D3 die Maßnahmenklasse \"Fundament schaffen\" gemäß Reifegrad L1 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L2": {
+        "title": "Standardisieren und stabilisieren: PA_D3",
+        "category": "organizational",
+        "impact": 5,
+        "effort": 2,
+        "measure_class": "Standardisieren und stabilisieren",
+        "description_template": "Leite in PA_D3 die Maßnahmenklasse \"Standardisieren und stabilisieren\" gemäß Reifegrad L2 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L3": {
+        "title": "Integrieren und skalieren: PA_D3",
+        "category": "organizational",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Integrieren und skalieren",
+        "description_template": "Leite in PA_D3 die Maßnahmenklasse \"Integrieren und skalieren\" gemäß Reifegrad L3 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      },
+      "L4": {
+        "title": "Optimieren: PA_D3",
+        "category": "organizational",
+        "impact": 3,
+        "effort": 3,
+        "measure_class": "Optimieren",
+        "description_template": "Leite in PA_D3 die Maßnahmenklasse \"Optimieren\" gemäß Reifegrad L4 ab und setze konkrete Arbeitspakete um.",
+        "prerequisites": [
+          "Verantwortliche benannt",
+          "Messkriterien definiert"
+        ],
+        "dependencies": [
+          "Abstimmung mit angrenzenden BI/PA-Dimensionen"
+        ]
+      }
     }
   },
-  "fallback": [
-    {
-      "title": "BI/PA-Backlog mit 90-Tage-Meilensteinen aufsetzen",
-      "category": "organizational",
-      "impact": 3,
-      "effort": 1,
-      "description_template": "Leite aus den Assessments ein abgestimmtes Backlog ab und überprüfe monatlich Wirkung, Risiken und Umsetzungsfortschritt."
-    }
-  ]
+  "fallback": {
+    "title": "Fundament schaffen: Übergreifender BI/PA-Backlog",
+    "category": "organizational",
+    "impact": 3,
+    "effort": 1,
+    "measure_class": "Fundament schaffen",
+    "description_template": "Setze ein übergreifendes Backlog mit 90-Tage-Meilensteinen auf.",
+    "prerequisites": [
+      "Zielbild abgestimmt"
+    ],
+    "dependencies": [
+      "Management-Commitment"
+    ]
+  }
 }

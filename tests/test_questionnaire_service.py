@@ -34,7 +34,7 @@ class QuestionnaireServiceTestCase(unittest.TestCase):
         questionnaire = self.service.get_questionnaire("v1.0")
 
         self.assertEqual(questionnaire.version, "v1.0")
-        self.assertEqual(len(questionnaire.questions), 30)
+        self.assertEqual(len(questionnaire.questions), 36)
 
     def test_validate_answer_set_detects_missing_required_answers(self) -> None:
         result = self.service.validate_answer_set("v1.0", {})
@@ -51,7 +51,7 @@ class QuestionnaireServiceTestCase(unittest.TestCase):
 
     def test_validate_answer_set_detects_invalid_scale_type(self) -> None:
         answers = self._build_valid_answers()
-        answers["BI_02"] = "hoch"
+        answers["DA_02"] = "hoch"
 
         result = self.service.validate_answer_set("v1.0", answers)
 
@@ -60,8 +60,8 @@ class QuestionnaireServiceTestCase(unittest.TestCase):
 
     def test_validate_answer_set_adds_consistency_warning(self) -> None:
         answers = self._build_valid_answers()
-        answers["CTX_04"] = 5
-        answers["SYN_03"] = 1
+        answers["DA_03"] = 5
+        answers["COUP_03"] = 1
 
         result = self.service.validate_answer_set("v1.0", answers)
 
@@ -96,7 +96,7 @@ class QuestionnaireApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["version"], "v1.0")
-        self.assertEqual(len(payload["questions"]), 30)
+        self.assertEqual(len(payload["questions"]), 36)
 
     def test_validate_route(self) -> None:
         use_case = self.client.post(

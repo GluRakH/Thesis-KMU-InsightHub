@@ -1,0 +1,94 @@
+{
+  "version": "v1.0",
+  "dimension_level_mapping": {
+    "BI_D1": {
+      "LOW": [
+        {
+          "title": "Datenquellen konsolidieren und Qualitätsregeln etablieren",
+          "category": "data",
+          "impact": 5,
+          "effort": 3,
+          "description_template": "Erstelle ein priorisiertes Dateninventar, definiere Qualitätsregeln und benenne Data Owner pro Kernobjekt."
+        },
+        {
+          "title": "Master-Datenmodell für KPI-relevante Entitäten aufbauen",
+          "category": "technical",
+          "impact": 4,
+          "effort": 4,
+          "description_template": "Standardisiere Kunden-, Produkt- und Prozessdaten, um Reporting und Automatisierung auf konsistenter Basis zu betreiben."
+        }
+      ],
+      "MED": [
+        {
+          "title": "Datenqualitätsmonitoring automatisieren",
+          "category": "data",
+          "impact": 4,
+          "effort": 2,
+          "description_template": "Führe tägliche Checks für Vollständigkeit und Aktualität ein und eskaliere Abweichungen über definierte Schwellenwerte."
+        }
+      ]
+    },
+    "BI_D2": {
+      "LOW": [
+        {
+          "title": "KPI-Governance mit eindeutiger Ownership etablieren",
+          "category": "governance",
+          "impact": 5,
+          "effort": 2,
+          "description_template": "Definiere KPI-Katalog, Zielwerte und Verantwortlichkeiten pro KPI inklusive Review-Rhythmus."
+        }
+      ],
+      "MED": [
+        {
+          "title": "Review-Board für KPI-Änderungen einführen",
+          "category": "organizational",
+          "impact": 3,
+          "effort": 2,
+          "description_template": "Etabliere ein monatliches Board, das KPI-Definitionen, Datenqualität und Maßnahmenwirkung gemeinsam bewertet."
+        }
+      ]
+    },
+    "PA_D1": {
+      "LOW": [
+        {
+          "title": "Prozessvarianten reduzieren und Soll-Prozess definieren",
+          "category": "organizational",
+          "impact": 5,
+          "effort": 3,
+          "description_template": "Dokumentiere den End-to-End-Prozess, identifiziere Ausnahmen und standardisiere kritische Prozessschritte."
+        }
+      ]
+    },
+    "PA_D2": {
+      "LOW": [
+        {
+          "title": "Automatisierungskandidaten per Aufwand/Nutzen-Matrix priorisieren",
+          "category": "technical",
+          "impact": 4,
+          "effort": 2,
+          "description_template": "Bewerte Automatisierungskandidaten nach Volumen, Fehlerquote und Integrationsaufwand für eine 90-Tage-Roadmap."
+        }
+      ]
+    },
+    "PA_D3": {
+      "LOW": [
+        {
+          "title": "Change-Enablement und Kontrollpunkte verbindlich machen",
+          "category": "governance",
+          "impact": 4,
+          "effort": 3,
+          "description_template": "Definiere Schulungsplan, Kommunikationsmaßnahmen und Governance-Kontrollen zur sicheren Skalierung von Automatisierung."
+        }
+      ]
+    }
+  },
+  "fallback": [
+    {
+      "title": "BI/PA-Backlog mit 90-Tage-Meilensteinen aufsetzen",
+      "category": "organizational",
+      "impact": 3,
+      "effort": 1,
+      "description_template": "Leite aus den Assessments ein abgestimmtes Backlog ab und überprüfe monatlich Wirkung, Risiken und Umsetzungsfortschritt."
+    }
+  ]
+}

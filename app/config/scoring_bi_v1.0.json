@@ -1,0 +1,51 @@
+{
+  "assessment_type": "BI",
+  "dimensions": {
+    "BI_D1": {
+      "title": "Data Foundation",
+      "questions": ["BI_01", "BI_02", "BI_03", "BI_07"],
+      "finding_templates": {
+        "LOW": "Die Datenbasis ist noch zu schwach ausgeprägt. Fokus auf Datenzugriff, Qualität und Standardisierung.",
+        "MED": "Die Datenbasis ist teilweise tragfähig, benötigt aber gezielte Stabilisierung.",
+        "HIGH": "Die Datenbasis ist solide und unterstützt BI-Initiativen wirksam."
+      }
+    },
+    "BI_D2": {
+      "title": "Measurement & Governance",
+      "questions": ["BI_04", "BI_08", "BI_10"],
+      "finding_templates": {
+        "LOW": "KPI-Definitionen und Ownership sind unzureichend geklärt.",
+        "MED": "Governance-Strukturen sind vorhanden, aber noch nicht durchgängig etabliert.",
+        "HIGH": "KPI-Governance und Verantwortlichkeiten sind klar und belastbar etabliert."
+      }
+    },
+    "BI_D3": {
+      "title": "Delivery & Usage",
+      "questions": ["BI_05", "BI_06", "BI_09"],
+      "finding_templates": {
+        "LOW": "Reporting-Nutzung und Bereitstellung sind noch wenig strukturiert.",
+        "MED": "Delivery und Nutzung sind in Ansätzen etabliert, aber noch nicht konsistent.",
+        "HIGH": "Reporting-Delivery und Self-Service-Nutzung sind gut etabliert."
+      }
+    }
+  },
+  "question_scoring": {
+    "BI_01": {"type": "multi_count_minus_one_capped", "max": 4},
+    "BI_02": {"type": "scale_minus_one"},
+    "BI_03": {"type": "scale_minus_one"},
+    "BI_04": {"type": "choice_map", "map": {"Nein": 0, "Teilweise": 2, "Ja": 4}},
+    "BI_05": {"type": "choice_map", "map": {"Nicht vorhanden": 0, "Unregelmäßig/ad hoc": 1, "Regelmäßig, aber wenig standardisiert": 3, "Regelmäßig und standardisiert": 4}},
+    "BI_06": {"type": "choice_map", "map": {"Echtzeit/nahe Echtzeit": 4, "Stündlich": 3, "Täglich": 2, "Wöchentlich": 1, "Monatlich": 0}},
+    "BI_07": {"type": "scale_minus_one"},
+    "BI_08": {"type": "choice_map", "map": {"Nein": 0, "Teilweise": 2, "Ja": 4}},
+    "BI_09": {"type": "scale_minus_one"},
+    "BI_10": {"type": "scale_minus_one"}
+  },
+  "maturity_thresholds": [
+    {"max": 0.9, "level": 1, "label": "LOW"},
+    {"max": 1.9, "level": 2, "label": "LOW"},
+    {"max": 2.9, "level": 3, "label": "MED"},
+    {"max": 3.5, "level": 4, "label": "HIGH"},
+    {"max": 4.0, "level": 5, "label": "HIGH"}
+  ]
+}

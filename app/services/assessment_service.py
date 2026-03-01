@@ -42,6 +42,7 @@ class AssessmentResult(BaseModel):
     maturity_level: int
     level_label: str
     dimension_scores: dict[str, float]
+    dimension_levels: dict[str, str]
     findings: dict[str, str]
 
 
@@ -70,6 +71,7 @@ class AssessmentService:
             maturity_level=result.maturity_level,
             level_label=result.level_label,
             dimension_scores=result.dimension_scores,
+            dimension_levels=result.dimension_levels,
             findings=result.findings,
             questionnaire_version=version,
             scoring_version=version,
@@ -87,6 +89,7 @@ class AssessmentService:
             maturity_level=result.maturity_level,
             level_label=result.level_label,
             dimension_scores=result.dimension_scores,
+            dimension_levels=result.dimension_levels,
             findings=result.findings,
             questionnaire_version=version,
             scoring_version=version,
@@ -96,6 +99,7 @@ class AssessmentService:
 
     def _compute(self, answers: dict[str, Any], config: AssessmentScoringConfig) -> AssessmentResult:
         dimension_scores: dict[str, float] = {}
+        dimension_levels: dict[str, str] = {}
         findings: dict[str, str] = {}
 
         for dimension_id, dimension in config.dimensions.items():
@@ -109,14 +113,17 @@ class AssessmentService:
 
             dimension_score = mean(question_scores) if question_scores else 0.0
             dimension_scores[dimension_id] = round(dimension_score, 2)
+            _, dim_label = self._resolve_maturity(dimension_score, config.maturity_thresholds)
+            dimension_levels[dimension_id] = dim_label
 
         overall_score = round(mean(dimension_scores.values()) if dimension_scores else 0.0, 2)
         maturity_level, level_label = self._resolve_maturity(overall_score, config.maturity_thresholds)
 
         for dimension_id, dimension in config.dimensions.items():
+            dimension_label = dimension_levels.get(dimension_id, level_label)
             findings[dimension_id] = dimension.finding_templates.get(
-                level_label,
-                f"Dimension {dimension_id} bewertet als {level_label}.",
+                dimension_label,
+                f"Dimension {dimension_id} bewertet als {dimension_label}.",
             )
 
         return AssessmentResult(
@@ -124,6 +131,7 @@ class AssessmentService:
             maturity_level=maturity_level,
             level_label=level_label,
             dimension_scores=dimension_scores,
+            dimension_levels=dimension_levels,
             findings=findings,
         )
 
@@ -138,6 +146,9 @@ class AssessmentService:
             count = len(answer) if isinstance(answer, list) else 0
             cap = score_config.max if score_config.max is not None else 4
             return float(max(0, min(cap, count - 1)))
+        if score_config.type == "scale_to_100":
+            value = float(answer)
+            return round(max(0.0, min(100.0, ((value - 1.0) / 4.0) * 100.0)), 2)
 
         raise ValueError(f"Unbekannter Scoring-Typ: {score_config.type}")
 

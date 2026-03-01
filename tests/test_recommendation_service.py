@@ -18,21 +18,23 @@ class RecommendationServiceTestCase(unittest.TestCase):
             recommendation="Reco",
             priority_focus="Fokus Datenbasis",
             heuristic_reason="Niedrige BI-Reife",
+            context_factors={"GLOBAL": 1.0},
         )
 
         catalog = self.service.generate_catalog(
             synthesis=synthesis,
-            bi_maturity_label="LOW",
-            pa_maturity_label="LOW",
-            bi_dimension_scores={"BI_D1": 1.2, "BI_D2": 2.0},
-            pa_dimension_scores={"PA_D1": 1.0, "PA_D2": 2.5},
+            bi_maturity_label="L2",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 45.0, "BI_D3": 65.0},
+            pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 30.0, "PA_D3": 55.0},
+            bi_dimension_levels={"BI_D1": "L1", "BI_D2": "L2", "BI_D3": "L3"},
+            pa_dimension_levels={"PA_D1": "L1", "PA_D2": "L2", "PA_D3": "L3"},
         )
 
         self.assertEqual(catalog.synthesis_id, "syn-1")
-        self.assertGreaterEqual(len(catalog.measures), 2)
+        self.assertEqual(len(catalog.measures), 6)
         self.assertEqual(catalog.measures[0].suggested_priority, 1)
-        self.assertTrue(any(item.dimension.startswith("BI_") for item in catalog.measures))
-        self.assertTrue(any(item.dimension.startswith("PA_") for item in catalog.measures))
+        self.assertTrue(all(item.measure_class for item in catalog.measures))
 
 
 if __name__ == "__main__":

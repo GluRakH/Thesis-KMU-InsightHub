@@ -76,9 +76,10 @@ class BIAssessment(VersionedModel):
     answer_set_id: str
     score: float = Field(ge=0)
     summary: str
-    maturity_level: int = Field(default=1, ge=1, le=5)
-    level_label: str = Field(default="LOW")
+    maturity_level: int = Field(default=1, ge=1, le=4)
+    level_label: str = Field(default="L1")
     dimension_scores: dict[str, float] = Field(default_factory=dict)
+    dimension_levels: dict[str, str] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
     questionnaire_version: str = Field(default="")
     scoring_version: str = Field(default="")
@@ -89,9 +90,10 @@ class PAAssessment(VersionedModel):
     answer_set_id: str
     score: float = Field(ge=0)
     summary: str
-    maturity_level: int = Field(default=1, ge=1, le=5)
-    level_label: str = Field(default="LOW")
+    maturity_level: int = Field(default=1, ge=1, le=4)
+    level_label: str = Field(default="L1")
     dimension_scores: dict[str, float] = Field(default_factory=dict)
+    dimension_levels: dict[str, str] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
     questionnaire_version: str = Field(default="")
     scoring_version: str = Field(default="")
@@ -105,6 +107,9 @@ class Synthesis(VersionedModel):
     combined_summary: str = Field(default="")
     priority_focus: str = Field(default="")
     heuristic_reason: str = Field(default="")
+    target_objectives: list[str] = Field(default_factory=list)
+    context_restrictions: list[str] = Field(default_factory=list)
+    context_factors: dict[str, float] = Field(default_factory=dict)
     questionnaire_version: str = Field(default="")
     scoring_version: str = Field(default="")
     llm_model: str = Field(default="")
@@ -119,8 +124,12 @@ class Measure(VersionedModel):
     category: MeasureCategory
     dimension: str = Field(default="")
     maturity_label: str = Field(default="")
+    measure_class: str = Field(default="")
     impact: int = Field(default=1, ge=1, le=5)
     effort: int = Field(default=1, ge=1, le=5)
+    priority_score: float = Field(default=0)
+    prerequisites: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
     suggested_priority: int = Field(default=1, ge=1)
 
 

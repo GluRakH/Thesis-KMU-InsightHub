@@ -216,7 +216,13 @@ def run_synthesis(answer_set_id: str, request: RunSynthesisRequest | None = None
             raise HTTPException(status_code=404, detail="Keine gespeicherten Assessments für answer_set_id gefunden.")
 
         bi_assessment, pa_assessment = assessments
-        synthesis = synthesis_service_with_config.synthesize(bi_assessment, pa_assessment)
+        loaded = repository.load_answer_set(answer_set_id)
+        answer_payload = {}
+        if loaded is not None:
+            _, answers = loaded
+            answer_payload = {answer.question_id: json.loads(answer.value) for answer in answers}
+
+        synthesis = synthesis_service_with_config.synthesize(bi_assessment, pa_assessment, answer_payload)
         repository.save_synthesis(synthesis)
 
     return synthesis.model_dump()
@@ -236,7 +242,12 @@ def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[
         bi_assessment, pa_assessment = assessments
         synthesis = repository.load_latest_synthesis_for_answer_set(answer_set_id)
         if synthesis is None:
-            synthesis = SynthesisService(llm_client=llm_client).synthesize(bi_assessment, pa_assessment)
+            loaded = repository.load_answer_set(answer_set_id)
+            answer_payload = {}
+            if loaded is not None:
+                _, answers = loaded
+                answer_payload = {answer.question_id: json.loads(answer.value) for answer in answers}
+            synthesis = SynthesisService(llm_client=llm_client).synthesize(bi_assessment, pa_assessment, answer_payload)
             repository.save_synthesis(synthesis)
 
         catalog = recommendation_service_with_config.generate_catalog(
@@ -245,6 +256,8 @@ def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[
             pa_maturity_label=pa_assessment.level_label,
             bi_dimension_scores=bi_assessment.dimension_scores,
             pa_dimension_scores=pa_assessment.dimension_scores,
+            bi_dimension_levels=bi_assessment.dimension_levels,
+            pa_dimension_levels=pa_assessment.dimension_levels,
             use_llm_texts=request.use_llm_texts,
         )
         repository.save_catalog(catalog)

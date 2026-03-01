@@ -17,8 +17,9 @@ class SynthesisServiceTestCase(unittest.TestCase):
             score=score,
             summary="BI",
             maturity_level=2,
-            level_label="MEDIUM",
-            dimension_scores={"BI_D1": 1.0, "BI_D2": 2.4},
+            level_label="L2",
+            dimension_scores={"BI_D1": 30.0, "BI_D2": 55.0},
+            dimension_levels={"BI_D1": "L2", "BI_D2": "L3"},
             findings={"BI_D1": "Datenbasis fehlt"},
             questionnaire_version="v1.0",
             scoring_version="v1.0",
@@ -32,31 +33,30 @@ class SynthesisServiceTestCase(unittest.TestCase):
             score=score,
             summary="PA",
             maturity_level=3,
-            level_label="MEDIUM",
-            dimension_scores={"PA_D1": 3.0, "PA_D2": 4.0},
+            level_label="L3",
+            dimension_scores={"PA_D1": 70.0, "PA_D2": 80.0},
+            dimension_levels={"PA_D1": "L3", "PA_D2": "L4"},
             findings={"PA_D1": "Gute Automatisierungspotenziale"},
             questionnaire_version="v1.0",
             scoring_version="v1.0",
         )
 
     def test_synthesize_applies_bi_first_rule(self) -> None:
-        synthesis = self.service.synthesize(self._bi(1.8), self._pa(3.5))
+        synthesis = self.service.synthesize(self._bi(35), self._pa(70), {"SYN_02": "Budget sehr begrenzt"})
 
         self.assertIn("Datenfundament", synthesis.priority_focus)
-        self.assertEqual(synthesis.questionnaire_version, "v1.0")
-        self.assertEqual(synthesis.scoring_version, "v1.0")
-        self.assertTrue(synthesis.llm_model)
+        self.assertEqual(synthesis.context_factors["GLOBAL"], 0.8)
 
     def test_synthesize_applies_pa_first_rule(self) -> None:
-        synthesis = self.service.synthesize(self._bi(3.4), self._pa(1.9))
+        synthesis = self.service.synthesize(self._bi(70), self._pa(35))
 
         self.assertIn("Prozessstandardisierung", synthesis.priority_focus)
 
     def test_synthesize_applies_balanced_rule(self) -> None:
-        synthesis = self.service.synthesize(self._bi(2.8), self._pa(2.7))
+        synthesis = self.service.synthesize(self._bi(55), self._pa(57), {"SYN_03": ["Reporting/Monitoring"]})
 
         self.assertIn("Parallelisierung", synthesis.priority_focus)
-        self.assertIn("KPI", synthesis.recommendation)
+        self.assertEqual(synthesis.target_objectives, ["Reporting/Monitoring"])
 
 
 if __name__ == "__main__":

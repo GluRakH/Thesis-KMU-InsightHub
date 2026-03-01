@@ -1,5 +1,5 @@
 {
-  "version": "v1.1",
+  "version": "v1.0",
   "title": "Fragebogen KMU InsightHub (BI & Prozessautomatisierung)",
   "questions": [
     {
@@ -7,222 +7,311 @@
       "text": "Es gibt eine explizite Strategie oder Roadmap für BI und/oder Prozessautomatisierung.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_02",
       "text": "Rollen, Verantwortlichkeiten und Entscheidungswege für BI/Automatisierung sind definiert.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_03",
       "text": "Es existiert ein priorisiertes Portfolio oder eine Pipeline für Daten-, Automatisierungs- oder Digitalisierungsinitiativen.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_04",
       "text": "Nutzen, Kosten und Risiken werden vor Umsetzung mindestens grob bewertet.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_05",
       "text": "Budget und Kapazitäten für Betrieb und Weiterentwicklung sind eingeplant.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_06",
       "text": "Externe Anforderungen (z. B. Compliance oder Kundenanforderungen) fließen systematisch in die Auswahl von Vorhaben ein.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "CTX_07",
       "text": "Die IT-Landschaft erlaubt die Integration neuer Datenquellen und Systeme mit vertretbarem Aufwand.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
-
     {
       "id": "DA_01",
       "text": "Für zentrale Datenobjekte sind Datenverantwortliche benannt und etabliert.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_02",
       "text": "Datenqualitätsregeln und -ziele sind definiert und werden regelmäßig überprüft.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_03",
       "text": "Kennzahlen und Begriffe sind organisationsweit einheitlich definiert (z. B. Glossar oder Datenkatalog).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_04",
       "text": "Datenherkunft und Datenflüsse sind für zentrale Reports/Analysen nachvollziehbar (Lineage/Transparenz).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_05",
       "text": "Es existiert eine Zielarchitektur für Datenhaltung und analytische Verarbeitung (z. B. DWH/Lakehouse).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_06",
       "text": "Datenpipelines sind standardisiert und werden überwacht (Fehlererkennung/Alarmierung).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_07",
       "text": "Der Zugriff auf Daten und Reports ist rollenbasiert geregelt und technisch durchgesetzt.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_08",
       "text": "Es gibt Self-Service-Fähigkeiten für Analysen/Reports, die tatsächlich genutzt werden.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_09",
       "text": "Analytische Ergebnisse sind in operative Entscheidungsprozesse integriert (nicht nur Reporting).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_10",
       "text": "Standards für Reporting und Visualisierung sind definiert, um Konsistenz sicherzustellen.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_11",
       "text": "Es existieren Prozesse zur Priorisierung und Steuerung von Analytics-Anforderungen (z. B. Demand Management).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "DA_12",
       "text": "Kompetenzen (fachlich/technisch) sind ausreichend, um Analytics-Lösungen zu entwickeln und zu betreiben.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
-
     {
       "id": "PA_01",
       "text": "Prozesse sind dokumentiert und ausreichend standardisiert, um Automatisierung zu bewerten.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_02",
       "text": "Es existieren Kriterien zur Auswahl und Priorisierung von Automatisierungs-Use-Cases.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_03",
       "text": "Es existieren Standards für Entwicklung, Test und Release von Automatisierungen.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_04",
       "text": "Betrieb und Support sind vorgesehen (Monitoring, Incident, Wartung, Verantwortlichkeiten).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_05",
       "text": "Technische Abhängigkeiten (Schnittstellen, Zugriffe, UI-Änderungen) werden vor Umsetzung systematisch bewertet.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_06",
       "text": "Risiken und Kontrollen (Auditierbarkeit, Fehlerfolgen, Berechtigungen) werden explizit betrachtet.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_07",
       "text": "Ein Governance-Modell für Automatisierung (zentral/föderiert/hybrid) ist definiert.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "PA_08",
       "text": "Skalierung ist geplant (Wiederverwendung, Kapazitätsplanung, Pipeline-Management).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
-
     {
       "id": "COUP_01",
       "text": "Es gibt einen klaren Mechanismus, wie Insights aus BI in operative Aktionen/Automatisierungen überführt werden.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "COUP_02",
       "text": "Ereignisse/KPIs können so bereitgestellt werden, dass sie Automatisierungen auslösen oder steuern können.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "COUP_03",
       "text": "Verantwortlichkeiten für die End-to-End-Wirkung (von Daten bis Prozessausführung) sind geklärt.",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
     {
       "id": "COUP_04",
       "text": "Es existiert ein Ansatz zur Messung der Wirkung nach Umsetzung (KPIs, Baseline, Zielwerte).",
       "type": "SCALE",
       "required": true,
-      "scale": { "min": 1, "max": 5 }
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
     },
-
     {
       "id": "SYN_01",
       "text": "Primäres Ziel des Vorhabens",

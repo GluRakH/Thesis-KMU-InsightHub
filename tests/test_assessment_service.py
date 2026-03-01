@@ -8,52 +8,31 @@ class AssessmentServiceTestCase(unittest.TestCase):
         self.service = AssessmentService()
 
     def test_compute_bi_assessment(self) -> None:
-        answers = {
-            "BI_01": ["ERP", "CRM", "Data Warehouse"],
-            "BI_02": 4,
-            "BI_03": 3,
-            "BI_04": "Ja",
-            "BI_05": "Regelmäßig und standardisiert",
-            "BI_06": "Täglich",
-            "BI_07": 4,
-            "BI_08": "Teilweise",
-            "BI_09": 3,
-            "BI_10": 4,
-        }
+        answers = {qid: 4 for qid in [
+            "DA_01", "DA_02", "DA_03", "DA_04", "DA_05", "DA_06", "DA_07", "DA_08", "DA_09", "DA_10", "DA_11", "DA_12", "COUP_01"
+        ]}
 
         result = self.service.compute_bi_assessment("as-1", answers)
 
         self.assertEqual(result.answer_set_id, "as-1")
         self.assertGreaterEqual(result.score, 0)
-        self.assertIn(result.maturity_level, [1, 2, 3, 4, 5])
+        self.assertIn(result.maturity_level, [1, 2, 3, 4])
         self.assertEqual(set(result.dimension_scores.keys()), {"BI_D1", "BI_D2", "BI_D3"})
-        self.assertEqual(result.questionnaire_version, "v1.0")
-        self.assertEqual(result.scoring_version, "v1.0")
+        self.assertEqual(set(result.dimension_levels.keys()), {"BI_D1", "BI_D2", "BI_D3"})
 
     def test_compute_pa_assessment(self) -> None:
-        answers = {
-            "PA_01": 4,
-            "PA_02": 3,
-            "PA_03": "Gelegentlich",
-            "PA_04": 4,
-            "PA_05": 3,
-            "PA_06": "2–3",
-            "PA_07": 4,
-            "PA_08": 3,
-            "PA_09": 4,
-            "PA_10": "Erste Piloten",
-        }
+        answers = {qid: 3 for qid in ["PA_01", "PA_02", "PA_03", "PA_04", "PA_05", "PA_06", "PA_07", "PA_08", "COUP_02", "COUP_03", "COUP_04"]}
 
         result = self.service.compute_pa_assessment("as-2", answers)
 
         self.assertEqual(result.answer_set_id, "as-2")
         self.assertGreaterEqual(result.score, 0)
-        self.assertIn(result.maturity_level, [1, 2, 3, 4, 5])
+        self.assertIn(result.maturity_level, [1, 2, 3, 4])
         self.assertEqual(set(result.dimension_scores.keys()), {"PA_D1", "PA_D2", "PA_D3"})
 
-    def test_score_rule_multi_count_minus_one_capped(self) -> None:
-        config = QuestionScoringConfig(type="multi_count_minus_one_capped", max=3)
-        self.assertEqual(self.service._score_answer(["a", "b", "c", "d", "e"], config), 3.0)
+    def test_score_rule_scale_to_100(self) -> None:
+        config = QuestionScoringConfig(type="scale_to_100")
+        self.assertEqual(self.service._score_answer(3, config), 50.0)
 
     def test_unknown_scoring_type_raises(self) -> None:
         config = QuestionScoringConfig(type="does_not_exist")

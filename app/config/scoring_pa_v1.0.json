@@ -2,50 +2,105 @@
   "assessment_type": "PA",
   "dimensions": {
     "PA_D1": {
-      "title": "Process Readiness",
-      "questions": ["PA_01", "PA_02", "PA_03", "PA_07"],
+      "title": "Process & Governance Readiness",
+      "questions": [
+        "PA_01",
+        "PA_02",
+        "PA_07"
+      ],
       "finding_templates": {
-        "LOW": "Die Prozessgrundlage ist für Automatisierung noch nicht ausreichend stabil.",
-        "MED": "Der Prozess ist grundsätzlich geeignet, benötigt aber weitere Standardisierung.",
-        "HIGH": "Der Prozess ist gut dokumentiert und für Automatisierung vorbereitet."
+        "L1": "Fundament schaffen: Prozessbasis und Governance etablieren.",
+        "L2": "Standardisieren und stabilisieren: Auswahl- und Governancekriterien vereinheitlichen.",
+        "L3": "Integrieren und skalieren: Governance in den Betrieb verankern.",
+        "L4": "Optimieren: kontinuierliche Governance-Verbesserung etablieren."
       }
     },
     "PA_D2": {
-      "title": "Automation Feasibility",
-      "questions": ["PA_04", "PA_05", "PA_06"],
+      "title": "Delivery & Risk Control",
+      "questions": [
+        "PA_03",
+        "PA_04",
+        "PA_05",
+        "PA_06"
+      ],
       "finding_templates": {
-        "LOW": "Automatisierungsfähigkeit ist derzeit begrenzt und erfordert Vorarbeiten.",
-        "MED": "Automatisierung ist machbar, aber mit technischen/organisatorischen Hürden.",
-        "HIGH": "Der Prozess ist technisch gut für Automatisierung geeignet."
+        "L1": "Fundament schaffen: Delivery-, Test- und Kontrollstandards definieren.",
+        "L2": "Standardisieren und stabilisieren: technische und regulatorische Risiken systematisch absichern.",
+        "L3": "Integrieren und skalieren: Delivery-Prozesse wiederverwendbar ausbauen.",
+        "L4": "Optimieren: Betrieb und Risiken proaktiv steuern."
       }
     },
     "PA_D3": {
-      "title": "Change & Control",
-      "questions": ["PA_08", "PA_09", "PA_10"],
+      "title": "Scaling & End-to-End Integration",
+      "questions": [
+        "PA_08",
+        "COUP_02",
+        "COUP_03",
+        "COUP_04"
+      ],
       "finding_templates": {
-        "LOW": "Change-Bereitschaft und Kontrollrahmen bremsen eine schnelle Umsetzung.",
-        "MED": "Kontrolle und Veränderungsbereitschaft sind teilweise vorhanden.",
-        "HIGH": "Organisation und Kontrolle unterstützen eine zügige Automatisierung."
+        "L1": "Fundament schaffen: Skalierungs- und E2E-Verantwortung klären.",
+        "L2": "Standardisieren und stabilisieren: Trigger, Ownership und Wirkungsmessung etablieren.",
+        "L3": "Integrieren und skalieren: End-to-End-Integration systematisch ausbauen.",
+        "L4": "Optimieren: Wirkungsmessung und Skalierung kontinuierlich verbessern."
       }
     }
   },
   "question_scoring": {
-    "PA_01": {"type": "scale_minus_one"},
-    "PA_02": {"type": "scale_minus_one"},
-    "PA_03": {"type": "choice_map", "map": {"Sehr häufig": 0, "Häufig": 1, "Gelegentlich": 3, "Selten": 4}},
-    "PA_04": {"type": "scale_minus_one"},
-    "PA_05": {"type": "scale_minus_one"},
-    "PA_06": {"type": "choice_map", "map": {"1": 4, "2–3": 3, "4–5": 1, ">5": 0}},
-    "PA_07": {"type": "scale_minus_one"},
-    "PA_08": {"type": "scale_reverse_5"},
-    "PA_09": {"type": "scale_minus_one"},
-    "PA_10": {"type": "choice_map", "map": {"Keine": 0, "Erste Piloten": 2, "Regelmäßig im Einsatz": 3, "Breite Nutzung/Center of Excellence": 4}}
+    "PA_01": {
+      "type": "scale_to_100"
+    },
+    "PA_02": {
+      "type": "scale_to_100"
+    },
+    "PA_03": {
+      "type": "scale_to_100"
+    },
+    "PA_04": {
+      "type": "scale_to_100"
+    },
+    "PA_05": {
+      "type": "scale_to_100"
+    },
+    "PA_06": {
+      "type": "scale_to_100"
+    },
+    "PA_07": {
+      "type": "scale_to_100"
+    },
+    "PA_08": {
+      "type": "scale_to_100"
+    },
+    "COUP_02": {
+      "type": "scale_to_100"
+    },
+    "COUP_03": {
+      "type": "scale_to_100"
+    },
+    "COUP_04": {
+      "type": "scale_to_100"
+    }
   },
   "maturity_thresholds": [
-    {"max": 0.9, "level": 1, "label": "LOW"},
-    {"max": 1.9, "level": 2, "label": "LOW"},
-    {"max": 2.9, "level": 3, "label": "MED"},
-    {"max": 3.5, "level": 4, "label": "HIGH"},
-    {"max": 4.0, "level": 5, "label": "HIGH"}
+    {
+      "max": 24.99,
+      "level": 1,
+      "label": "L1"
+    },
+    {
+      "max": 49.99,
+      "level": 2,
+      "label": "L2"
+    },
+    {
+      "max": 74.99,
+      "level": 3,
+      "label": "L3"
+    },
+    {
+      "max": 100.0,
+      "level": 4,
+      "label": "L4"
+    }
   ]
 }

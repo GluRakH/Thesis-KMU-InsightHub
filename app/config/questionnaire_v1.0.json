@@ -1,39 +1,386 @@
 {
   "version": "v1.0",
-  "title": "Fragebogen BI-AutoPilot",
+  "title": "Fragebogen KMU InsightHub (BI & Prozessautomatisierung)",
   "questions": [
-    {"id": "CTX_01", "text": "Welches Ziel soll mit dem beschriebenen Use Case primär erreicht werden?", "type": "SINGLE_CHOICE", "required": true, "options": ["Kosten senken", "Durchlaufzeit reduzieren", "Qualität/Fehler reduzieren", "Transparenz/Steuerung verbessern", "Compliance/Risiko senken", "Umsatz/Service verbessern", "Sonstiges"]},
-    {"id": "CTX_02", "text": "In welchem Fachbereich bzw. Prozesskontext tritt der Use Case auf?", "type": "TEXT", "required": true},
-    {"id": "CTX_03", "text": "Wie häufig tritt der Use Case bzw. der zugrunde liegende Prozess typischerweise auf?", "type": "SINGLE_CHOICE", "required": true, "options": ["Mehrmals täglich", "Täglich", "Wöchentlich", "Monatlich", "Seltener"]},
-    {"id": "CTX_04", "text": "Wie kritisch ist der Use Case für Betrieb oder Wertschöpfung?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "CTX_05", "text": "Welche Rollen sind im Prozess wesentlich beteiligt oder betroffen?", "type": "MULTI_CHOICE", "required": false, "options": ["Fachbereich", "IT", "Management", "Controlling", "Operations", "Compliance", "Externe Partner", "Sonstige"]},
-    {"id": "CTX_06", "text": "Wie stark sind Zeit, Budget und interne Ressourcen für die Umsetzung eingeschränkt?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-
-    {"id": "BI_01", "text": "Welche Datenquellen sind für den Use Case grundsätzlich verfügbar?", "type": "MULTI_CHOICE", "required": true, "options": ["ERP", "CRM", "MES/Produktion", "Ticketing/Service", "Excel/Files", "Data Warehouse", "Cloud Apps", "Sonstige"]},
-    {"id": "BI_02", "text": "Wie gut ist der Zugriff auf die benötigten Daten organisatorisch und technisch geregelt?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "BI_03", "text": "Wie bewerten Sie die Datenqualität für den Use Case (Vollständigkeit, Aktualität, Konsistenz)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "BI_04", "text": "Sind die für den Use Case relevanten Kennzahlen eindeutig definiert und dokumentiert?", "type": "SINGLE_CHOICE", "required": true, "options": ["Nein", "Teilweise", "Ja"]},
-    {"id": "BI_05", "text": "Wie werden Reports/Dashboards aktuell im Unternehmen genutzt?", "type": "SINGLE_CHOICE", "required": false, "options": ["Nicht vorhanden", "Unregelmäßig/ad hoc", "Regelmäßig, aber wenig standardisiert", "Regelmäßig und standardisiert"]},
-    {"id": "BI_06", "text": "Welche Aktualität benötigen die Informationen für den Use Case typischerweise?", "type": "SINGLE_CHOICE", "required": true, "options": ["Echtzeit/nahe Echtzeit", "Stündlich", "Täglich", "Wöchentlich", "Monatlich"]},
-    {"id": "BI_07", "text": "Wie standardisiert sind Datenmodelle/Definitionen (z. B. einheitliche Begriffe, Dimensionen, Stammdaten)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "BI_08", "text": "Ist klar geregelt, wer für Daten, KPIs und Reports fachlich verantwortlich ist (Ownership)?", "type": "SINGLE_CHOICE", "required": true, "options": ["Nein", "Teilweise", "Ja"]},
-    {"id": "BI_09", "text": "In welchem Umfang wird Self-Service-Analytics durch Fachbereiche genutzt oder angestrebt?", "type": "SCALE", "required": false, "scale": {"min": 1, "max": 5}},
-    {"id": "BI_10", "text": "Wie etabliert ist ein Monitoring über KPIs zur Steuerung und Erfolgsmessung (z. B. definierte Zielwerte, regelmäßige Reviews)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-
-    {"id": "PA_01", "text": "Wie gut ist der Prozess dokumentiert (Ablauf, Verantwortlichkeiten, Varianten)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_02", "text": "Wie stark ist der Prozess standardisiert (wenige Varianten, klare Regeln)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_03", "text": "Wie häufig treten Ausnahmen oder Sonderfälle im Prozess auf?", "type": "SINGLE_CHOICE", "required": true, "options": ["Selten", "Gelegentlich", "Häufig", "Sehr häufig"]},
-    {"id": "PA_04", "text": "In welchem Ausmaß sind Entscheidungen im Prozess regelbasiert und automatisierbar?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_05", "text": "Wie stark ist der Prozess durch Medienbrüche geprägt (Excel, E-Mail, Copy-Paste, Papier)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_06", "text": "Über wie viele Systeme/Tools verteilt sich der Prozess typischerweise?", "type": "SINGLE_CHOICE", "required": true, "options": ["1", "2–3", "4–5", ">5"]},
-    {"id": "PA_07", "text": "Wie gut lässt sich der Prozess aktuell über Kennzahlen messen (Durchlaufzeit, Fehlerquote, SLA etc.)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_08", "text": "Wie hoch sind Kontroll- oder Compliance-Anforderungen im Prozess (Freigaben, Dokumentation, Audit)?", "type": "SCALE", "required": false, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_09", "text": "Wie hoch ist die Bereitschaft im Fachbereich, Prozessschritte zu standardisieren und zu verändern?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "PA_10", "text": "Welche Erfahrung besteht bereits mit Prozessautomatisierung (RPA/Workflow/Low-Code)?", "type": "SINGLE_CHOICE", "required": false, "options": ["Keine", "Erste Piloten", "Regelmäßig im Einsatz", "Breite Nutzung/Center of Excellence"]},
-
-    {"id": "SYN_01", "text": "Wie stark hängen BI und Automatisierung im Use Case voneinander ab (z. B. Datenbasis als Voraussetzung für Automatisierung oder umgekehrt)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "SYN_02", "text": "Welche Nutzenkriterien sind für die Priorisierung am wichtigsten?", "type": "MULTI_CHOICE", "required": true, "options": ["Zeitersparnis", "Kostensenkung", "Qualitätssteigerung", "Risiko/Compliance", "Transparenz/Steuerung", "Kundennutzen"]},
-    {"id": "SYN_03", "text": "Wie hoch ist die Risikotoleranz für Pilotierung und Veränderung (Fehlertoleranz, Experimentierfreude)?", "type": "SCALE", "required": true, "scale": {"min": 1, "max": 5}},
-    {"id": "SYN_04", "text": "In welchem Zeithorizont sollen erste messbare Ergebnisse vorliegen?", "type": "SINGLE_CHOICE", "required": true, "options": ["< 1 Monat", "1–3 Monate", "3–6 Monate", "6–12 Monate", "> 12 Monate"]}
+    {
+      "id": "CTX_01",
+      "text": "Es gibt eine explizite Strategie oder Roadmap für BI und/oder Prozessautomatisierung.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_02",
+      "text": "Rollen, Verantwortlichkeiten und Entscheidungswege für BI/Automatisierung sind definiert.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_03",
+      "text": "Es existiert ein priorisiertes Portfolio oder eine Pipeline für Daten-, Automatisierungs- oder Digitalisierungsinitiativen.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_04",
+      "text": "Nutzen, Kosten und Risiken werden vor Umsetzung mindestens grob bewertet.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_05",
+      "text": "Budget und Kapazitäten für Betrieb und Weiterentwicklung sind eingeplant.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_06",
+      "text": "Externe Anforderungen (z. B. Compliance oder Kundenanforderungen) fließen systematisch in die Auswahl von Vorhaben ein.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "CTX_07",
+      "text": "Die IT-Landschaft erlaubt die Integration neuer Datenquellen und Systeme mit vertretbarem Aufwand.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_01",
+      "text": "Für zentrale Datenobjekte sind Datenverantwortliche benannt und etabliert.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_02",
+      "text": "Datenqualitätsregeln und -ziele sind definiert und werden regelmäßig überprüft.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_03",
+      "text": "Kennzahlen und Begriffe sind organisationsweit einheitlich definiert (z. B. Glossar oder Datenkatalog).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_04",
+      "text": "Datenherkunft und Datenflüsse sind für zentrale Reports/Analysen nachvollziehbar (Lineage/Transparenz).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_05",
+      "text": "Es existiert eine Zielarchitektur für Datenhaltung und analytische Verarbeitung (z. B. DWH/Lakehouse).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_06",
+      "text": "Datenpipelines sind standardisiert und werden überwacht (Fehlererkennung/Alarmierung).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_07",
+      "text": "Der Zugriff auf Daten und Reports ist rollenbasiert geregelt und technisch durchgesetzt.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_08",
+      "text": "Es gibt Self-Service-Fähigkeiten für Analysen/Reports, die tatsächlich genutzt werden.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_09",
+      "text": "Analytische Ergebnisse sind in operative Entscheidungsprozesse integriert (nicht nur Reporting).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_10",
+      "text": "Standards für Reporting und Visualisierung sind definiert, um Konsistenz sicherzustellen.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_11",
+      "text": "Es existieren Prozesse zur Priorisierung und Steuerung von Analytics-Anforderungen (z. B. Demand Management).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "DA_12",
+      "text": "Kompetenzen (fachlich/technisch) sind ausreichend, um Analytics-Lösungen zu entwickeln und zu betreiben.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_01",
+      "text": "Prozesse sind dokumentiert und ausreichend standardisiert, um Automatisierung zu bewerten.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_02",
+      "text": "Es existieren Kriterien zur Auswahl und Priorisierung von Automatisierungs-Use-Cases.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_03",
+      "text": "Es existieren Standards für Entwicklung, Test und Release von Automatisierungen.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_04",
+      "text": "Betrieb und Support sind vorgesehen (Monitoring, Incident, Wartung, Verantwortlichkeiten).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_05",
+      "text": "Technische Abhängigkeiten (Schnittstellen, Zugriffe, UI-Änderungen) werden vor Umsetzung systematisch bewertet.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_06",
+      "text": "Risiken und Kontrollen (Auditierbarkeit, Fehlerfolgen, Berechtigungen) werden explizit betrachtet.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_07",
+      "text": "Ein Governance-Modell für Automatisierung (zentral/föderiert/hybrid) ist definiert.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "PA_08",
+      "text": "Skalierung ist geplant (Wiederverwendung, Kapazitätsplanung, Pipeline-Management).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "COUP_01",
+      "text": "Es gibt einen klaren Mechanismus, wie Insights aus BI in operative Aktionen/Automatisierungen überführt werden.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "COUP_02",
+      "text": "Ereignisse/KPIs können so bereitgestellt werden, dass sie Automatisierungen auslösen oder steuern können.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "COUP_03",
+      "text": "Verantwortlichkeiten für die End-to-End-Wirkung (von Daten bis Prozessausführung) sind geklärt.",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "COUP_04",
+      "text": "Es existiert ein Ansatz zur Messung der Wirkung nach Umsetzung (KPIs, Baseline, Zielwerte).",
+      "type": "SCALE",
+      "required": true,
+      "scale": {
+        "min": 1,
+        "max": 5
+      }
+    },
+    {
+      "id": "SYN_01",
+      "text": "Primäres Ziel des Vorhabens",
+      "type": "SINGLE_CHOICE",
+      "required": true,
+      "options": [
+        "Kostenreduktion",
+        "Zeit-/Durchlaufzeitreduktion",
+        "Qualitätsverbesserung/Fehlerreduktion",
+        "Compliance/Risikoreduktion",
+        "Transparenz/Steuerbarkeit",
+        "Umsatz-/Serviceverbesserung"
+      ]
+    },
+    {
+      "id": "SYN_02",
+      "text": "Wichtigste Einschränkung",
+      "type": "SINGLE_CHOICE",
+      "required": true,
+      "options": [
+        "Budget sehr begrenzt",
+        "Zeitdruck/kurzer Zeithorizont",
+        "IT-Kapazität begrenzt",
+        "Datenlage unklar/heterogen",
+        "Compliance/Regulatorik dominant",
+        "Abhängigkeit von Drittanbietern/Systemen"
+      ]
+    },
+    {
+      "id": "SYN_03",
+      "text": "Art der Prozess- bzw. Entscheidungsunterstützung",
+      "type": "MULTI_CHOICE",
+      "required": true,
+      "options": [
+        "Reporting/Monitoring",
+        "Ursachenanalyse",
+        "Vorhersage/Forecasting",
+        "Entscheidungsempfehlung",
+        "Ausführung/Automatisierung von Prozessschritten",
+        "End-to-End Orchestrierung (Insight → Action)"
+      ]
+    },
+    {
+      "id": "SYN_04",
+      "text": "Systemumfeld (grob)",
+      "type": "MULTI_CHOICE",
+      "required": true,
+      "options": [
+        "ERP",
+        "CRM",
+        "Ticket-/Service-System",
+        "DMS/ECM",
+        "Data Warehouse / Data Lake",
+        "RPA-Plattform / Workflow-Tool",
+        "Keine klare zentrale Datenplattform"
+      ]
+    },
+    {
+      "id": "SYN_05",
+      "text": "Erfolgskriterium für den Output",
+      "type": "SINGLE_CHOICE",
+      "required": true,
+      "options": [
+        "Klare Priorisierung von Maßnahmen",
+        "Nachvollziehbare Begründung (Transparenz)",
+        "Konkrete Umsetzungsroadmap (Schritte)",
+        "Grobe Wirtschaftlichkeitsabschätzung",
+        "Risiko-/Machbarkeitsbewertung"
+      ]
+    }
   ]
 }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from domain.models import MeasureCatalog
@@ -152,4 +152,9 @@ def payload_to_markdown(payload: dict[str, Any]) -> str:
 
 
 def payload_to_json(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    def _json_default(value: Any) -> Any:
+        if isinstance(value, (datetime, date)):
+            return value.isoformat()
+        raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
+
+    return json.dumps(payload, ensure_ascii=False, indent=2, default=_json_default)

@@ -1,5 +1,6 @@
 import random
 import unittest
+from datetime import date, datetime, timezone
 
 from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
 
@@ -20,6 +21,19 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertEqual(payload["export_version"], "1.1.0")
         self.assertIn("Export Version: 1.1.0", markdown)
         self.assertIn('"export_version": "1.1.0"', raw_json)
+
+    def test_payload_to_json_serializes_date_and_datetime(self) -> None:
+        payload = {
+            "timestamp": datetime(2026, 1, 2, 3, 4, tzinfo=timezone.utc),
+            "answers": {
+                "survey_date": date(2026, 1, 1),
+            },
+        }
+
+        raw_json = payload_to_json(payload)
+
+        self.assertIn('"timestamp": "2026-01-02T03:04:00+00:00"', raw_json)
+        self.assertIn('"survey_date": "2026-01-01"', raw_json)
 
 
 if __name__ == "__main__":

@@ -88,6 +88,29 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertEqual(buckets["now"], ["INIT-BI-GOVERNANCE-01"])
         self.assertEqual(buckets["next"], ["INIT-BI-TECHNICAL-01"])
 
+    def test_template_hard_dependencies_are_mapped_to_initiative_ids(self) -> None:
+        synthesis = Synthesis(
+            synthesis_id="syn-2",
+            answer_set_id="as-2",
+            bi_assessment_id="bi-2",
+            pa_assessment_id="pa-2",
+            recommendation="Reco",
+        )
+        catalog = self.service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label="L1",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 30.0, "BI_D3": 40.0},
+            pa_dimension_scores={"PA_D1": 50.0, "PA_D2": 60.0, "PA_D3": 70.0},
+            answers={"DA_01": 1, "DA_06": 1},
+        )
+        by_class = {m.measure_class: m for m in catalog.measures}
+        self.assertIn("BI_GOV_FOUNDATION", by_class)
+        self.assertIn("BI_DATA_QUALITY_MONITORING", by_class)
+        gov_id = by_class["BI_GOV_FOUNDATION"].initiative_id
+        self.assertIn(gov_id, by_class["BI_DATA_QUALITY_MONITORING"].dependencies)
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -205,8 +205,23 @@ class RecommendationService:
         return f"INIT-{domain}-{category.value.upper()}-{sequence:02d}"
 
     @staticmethod
-    def _build_deficit_statement(dimension: str, score: float) -> str:
-        return f"Dimension {dimension} liegt mit {score:.2f} unter dem Zielkorridor und erzeugt Umsetzungsdefizite."
+    def _domain_from_dimension(dimension: str) -> str:
+        if dimension.startswith("BI_"):
+            return "BI"
+        if dimension.startswith("PA_"):
+            return "PA"
+        return "GLOBAL"
+
+    def _select_triggers(self, bundle: DimensionTemplateBundle, evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        rules = bundle.template.evidence_rules
+        preferred = [str(item) for item in rules.get("trigger_items_preferred", [])]
+        threshold = float(rules.get("deficit_threshold", 0.0))
+
+        preferred_items = [item for item in evidence if item["item_id"] in preferred and item["deficit_score"] >= threshold]
+        if preferred_items:
+            preferred_items.sort(key=lambda item: item["deficit_score"], reverse=True)
+            return preferred_items[:3]
+        return evidence[:3]
 
     @staticmethod
     def _domain_from_dimension(dimension: str) -> str:

@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "defaults": {
+    "scale": {"min": 1, "max": 5},
+    "export": {"deliverables_exactly": 3},
+    "priority": {"impact_range": [1, 5], "effort_range": [1, 5]}
+  },
+  "dimensions": {
+    "BI_D1": {
+      "dimension_name": "BI-Governance & Verantwortlichkeiten",
+      "good_definition": "Zuständigkeiten für Daten und Kennzahlen sind eindeutig festgelegt und werden organisatorisch gelebt. Änderungen an Datenmodellen und KPI-Definitionen folgen einem nachvollziehbaren Prozess mit Review und Freigabe.",
+      "minimal_standards": [
+        "Benannte Data Owner und BI-Owner für zentrale Datenobjekte und KPI-Bereiche.",
+        "Definierter Änderungsprozess für Datenmodell und KPI mit Ticket, Review und Freigabe."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "Governance ist als wiederholbarer Prozess etabliert und wird für die wichtigsten BI-Artefakte angewendet."},
+      "primary_template": {
+        "template_id": "BI_GOV_FOUNDATION",
+        "title": "BI-Governance-Basics etablieren",
+        "category": "governance",
+        "applies_to": {"domain": "BI", "dimensions": ["BI_D1"]},
+        "evidence_rules": {"trigger_items_preferred": ["DA_01", "DA_02", "DA_03"], "deficit_threshold": 0.55},
+        "goal": "Rollen, Verantwortlichkeiten und Freigabeprozesse für BI-Kernartefakte sind definiert und werden operativ angewendet.",
+        "deliverables": [
+          "RACI für Datenobjekte, KPI-Domänen und BI-Assets (Owner, Stellvertretung, Eskalationsweg) inklusive Veröffentlichung.",
+          "Change-Workflow für BI (Ticketvorlage, Review-Schritte, Freigabekriterien, Release Notes) für Datenmodell und KPI.",
+          "Governance-Backlog und Regeltermine (monatliches Board) mit Protokoll und Entscheidungslog."
+        ],
+        "kpi": {
+          "name": "Governance-Abdeckungsquote",
+          "target": ">= 90% der priorisierten BI-Assets haben Owner und dokumentierten Freigabestatus",
+          "measurement": "Stichprobe oder automatisierter Abgleich: BI-Asset-Liste gegen RACI und Change-Log.",
+          "frequency": "monatlich",
+          "source_system": "BI-Tool + Ticket-System + Governance-Register",
+          "owner_role": "BI Product Owner"
+        },
+        "estimates": {"impact": 5, "effort": 2, "rationale": "Hoher Nutzen als Voraussetzung für stabile Skalierung, vergleichsweise geringer Implementierungsaufwand."},
+        "sequencing": {"hard_dependencies": [], "soft_dependencies": [], "gate_rules": []}
+      }
+    },
+    "BI_D2": {
+      "dimension_name": "Datenqualität & Datenmanagement",
+      "good_definition": "Datenqualitätsregeln sind definiert, überwacht und führen zu einem wiederholbaren Korrekturprozess. Kritische Datenobjekte sind versioniert, dokumentiert und Änderungen werden kontrolliert ausgerollt.",
+      "minimal_standards": [
+        "Definierte DQ-Regeln für kritische Felder und eindeutige Fehlerbehandlung.",
+        "Monitoring mit definierten Schwellen und Eskalationsweg."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "Datenqualität wird kontinuierlich gemessen, Abweichungen werden systematisch behoben und nachverfolgt."},
+      "primary_template": {
+        "template_id": "BI_DATA_QUALITY_MONITORING",
+        "title": "Datenqualitätsregeln und Monitoring einführen",
+        "category": "data",
+        "applies_to": {"domain": "BI", "dimensions": ["BI_D2"]},
+        "evidence_rules": {"trigger_items_preferred": ["DA_06", "DA_07", "DA_08"], "deficit_threshold": 0.55},
+        "goal": "Datenqualitätsprüfungen für zentrale Datenobjekte sind implementiert, überwacht und in einen Korrekturprozess eingebunden.",
+        "deliverables": [
+          "DQ-Regelwerk für Top-5 Datenobjekte (Vollständigkeit, Validität, Eindeutigkeit, Aktualität) inkl. Schwellenwerten.",
+          "DQ-Monitoring (Dashboard oder Logging) mit Alerts und Klassifizierung der Fehlerursachen.",
+          "DQ-Triage-Prozess (Ticket, Owner-Zuordnung, SLA, Root-Cause-Analyse) inklusive monatlichem Review."
+        ],
+        "kpi": {
+          "name": "DQ-Fehlerquote kritischer Felder",
+          "target": "<= 2% Regelverletzungen in kritischen Feldern der Top-5 Datenobjekte",
+          "measurement": "Anteil der Datensätze mit Regelverletzung pro Objekt und Zeitraum aus DQ-Checks.",
+          "frequency": "wöchentlich",
+          "source_system": "DWH/ETL-Logs + DQ-Dashboard",
+          "owner_role": "Data Owner"
+        },
+        "estimates": {"impact": 5, "effort": 3, "rationale": "Hoher Nutzen für Vertrauen und Automatisierung; Aufwand durch Regeldefinition und technische Umsetzung."},
+        "sequencing": {"hard_dependencies": ["BI_GOV_FOUNDATION"], "soft_dependencies": [], "gate_rules": []}
+      }
+    },
+    "BI_D3": {
+      "dimension_name": "Semantik, KPI-Definitionen & konsistente Berichtslogik",
+      "good_definition": "KPI und Begriffe sind eindeutig definiert, zentral versioniert und werden in Berichten konsistent verwendet. KPI-Änderungen erfolgen kontrolliert, sodass Interpretationskonflikte reduziert werden.",
+      "minimal_standards": [
+        "Zentraler KPI-Katalog mit Formel, Granularität, Filterlogik und Owner.",
+        "Versionierung und Freigabe von KPI-Definitionen."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "Semantik ist zentral durchgesetzt; priorisierte Berichte nutzen freigegebene KPI-Definitionen."},
+      "primary_template": {
+        "template_id": "BI_SEMANTIC_KPI_HARMONIZATION",
+        "title": "Semantik- und KPI-Definitionen harmonisieren",
+        "category": "data",
+        "applies_to": {"domain": "BI", "dimensions": ["BI_D3"]},
+        "evidence_rules": {"trigger_items_preferred": ["COUP_01", "DA_09", "DA_10"], "deficit_threshold": 0.5},
+        "goal": "KPI-Definitionen sind zentral definiert, versioniert und werden in den priorisierten Berichten technisch konsistent angewendet.",
+        "deliverables": [
+          "KPI-Katalog als versioniertes Artefakt (Formel, Filterlogik, Granularität, Owner, Gültigkeit) mit Freigabestatus.",
+          "Semantikschicht oder zentrale Metrikdefinitionen im BI-Stack implementiert und auf Top-10 Berichte ausgerollt.",
+          "Change-Prozess für KPI-Änderungen (Ticket, Review, Abnahme, Release Notes) inklusive Verantwortlichkeitsmodell."
+        ],
+        "kpi": {
+          "name": "KPI-Konsistenzquote",
+          "target": ">= 90% der priorisierten Berichte nutzen freigegebene KPI-Definitionen",
+          "measurement": "Abgleich der in Berichten verwendeten Measures mit dem zentralen KPI-Katalog über Referenzen/IDs.",
+          "frequency": "monatlich",
+          "source_system": "BI-Tool + KPI-Katalog-Repository",
+          "owner_role": "BI Product Owner"
+        },
+        "estimates": {"impact": 4, "effort": 3, "rationale": "Hoher Nutzen für Steuerbarkeit; Aufwand durch Harmonisierung von Definitionen und Anpassung von Berichten."},
+        "sequencing": {"hard_dependencies": ["BI_GOV_FOUNDATION"], "soft_dependencies": ["BI_DATA_QUALITY_MONITORING"], "gate_rules": []}
+      }
+    },
+    "PA_D1": {
+      "dimension_name": "PA-Governance & Use-Case-Steuerung",
+      "good_definition": "Predictive- und Automatisierungs-Use-Cases werden nach klaren Kriterien priorisiert, freigegeben und kontrolliert betrieben. Risiken, Compliance und Nutzenargumentation sind nachvollziehbar dokumentiert.",
+      "minimal_standards": [
+        "Definierte Auswahl- und Freigabekriterien für PA/Automation-Use-Cases.",
+        "Rollen für Modellverantwortung und Freigabe inkl. Risiko-/Compliance-Check."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "Use-Cases werden strukturiert gesteuert und Änderungen an Modellen/Automationen folgen einem Freigabeprozess."},
+      "primary_template": {
+        "template_id": "PA_GOV_USECASE_CONTROL",
+        "title": "PA-Governance und Use-Case-Steuerung standardisieren",
+        "category": "governance",
+        "applies_to": {"domain": "PA", "dimensions": ["PA_D1"]},
+        "evidence_rules": {"trigger_items_preferred": ["PA_01", "PA_02", "PA_07"], "deficit_threshold": 0.55},
+        "goal": "Priorisierung, Freigabe und Risikoabsicherung für PA-Use-Cases sind als wiederholbarer Prozess etabliert.",
+        "deliverables": [
+          "Use-Case-Canvas und Bewertungsraster (Nutzen, Risiko, Datenverfügbarkeit, Umsetzbarkeit) inkl. Mindestanforderungen.",
+          "PA-Governance-Workflow (Review, Freigabe, Audit-Log) für Modell- und Automationsänderungen.",
+          "Rollenmodell (Model Owner, Approver, Operator) mit Verantwortlichkeiten und Eskalationsweg."
+        ],
+        "kpi": {
+          "name": "Governance-Compliance-Quote PA",
+          "target": ">= 90% der produktiven PA-Use-Cases erfüllen Freigabe- und Dokumentationskriterien",
+          "measurement": "Prüfung: Use-Case-Liste gegen Canvas, Freigabeprotokoll und Audit-Log.",
+          "frequency": "monatlich",
+          "source_system": "Ticket-System + Wiki/Repository",
+          "owner_role": "PA Product Owner"
+        },
+        "estimates": {"impact": 5, "effort": 2, "rationale": "Voraussetzung für Skalierung und Risikoreduktion; organisatorisch gut umsetzbar."},
+        "sequencing": {"hard_dependencies": [], "soft_dependencies": [], "gate_rules": []}
+      }
+    },
+    "PA_D2": {
+      "dimension_name": "Automations-/Modellpipeline, Testbarkeit & Stabilität",
+      "good_definition": "Modelle und Automationen sind versioniert, testbar und reproduzierbar, mit klaren Deploymentschritten. Fehler werden früh erkannt, Rollbacks sind möglich und Änderungen sind nachvollziehbar.",
+      "minimal_standards": [
+        "Versionierung von Code/Artefakten und reproduzierbare Runs.",
+        "Automatisierte Tests (mindestens Smoke/Regression) vor Deployment."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "End-to-End-Pipeline ist industrialisiert, getestet und kontrolliert ausrollbar."},
+      "primary_template": {
+        "template_id": "PA_PIPELINE_INDUSTRIALIZATION",
+        "title": "Automatisierungs-Pipeline industrialisieren",
+        "category": "technical",
+        "applies_to": {"domain": "PA", "dimensions": ["PA_D2"]},
+        "evidence_rules": {"trigger_items_preferred": ["PA_03", "PA_04", "PA_05"], "deficit_threshold": 0.55},
+        "goal": "PA-/Automations-Pipelines sind versioniert, testbar und mit wiederholbaren Deploymentschritten operationalisiert.",
+        "deliverables": [
+          "CI/CD-Grundgerüst für PA/Automation (Build, Test, Deploy) inkl. Artefaktversionierung.",
+          "Testpaket (Smoke + Regression) mit definierten Abnahmekriterien und automatisierter Ausführung.",
+          "Rollback- und Incident-Prozess (Runbook, Eskalation, Postmortem) für produktive Automationen."
+        ],
+        "kpi": {
+          "name": "Deployment-Erfolgsquote",
+          "target": ">= 95% erfolgreiche Deployments ohne Rollback im Monat",
+          "measurement": "Anteil erfolgreicher Deployments aus CI/CD-Logs; Rollbacks und fehlgeschlagene Runs zählen als Fehler.",
+          "frequency": "monatlich",
+          "source_system": "CI/CD + Monitoring/Logs",
+          "owner_role": "Platform/DevOps"
+        },
+        "estimates": {"impact": 5, "effort": 3, "rationale": "Stabilität und Skalierung hängen von Test- und Deploymentfähigkeit ab; technischer Aufbau erfordert moderaten Aufwand."},
+        "sequencing": {"hard_dependencies": ["PA_GOV_USECASE_CONTROL"], "soft_dependencies": [], "gate_rules": []}
+      }
+    },
+    "PA_D3": {
+      "dimension_name": "Betrieb, Monitoring & Skalierung von PA",
+      "good_definition": "Es existieren klare Betriebsverantwortlichkeiten, Monitoring und Wartungsroutinen für produktive Modelle/Automationen. Drift, Ausfälle und Qualitätsverluste werden erkannt und führen zu definierten Gegenmaßnahmen.",
+      "minimal_standards": [
+        "Monitoring für Verfügbarkeit, Qualität und relevante Modellmetriken.",
+        "Regelmäßige Review- und Wartungsroutine inkl. Verantwortlichkeiten."
+      ],
+      "target_state": {"maturity_target": "L3", "description": "Betrieb ist als Routine etabliert; Modelle/Automationen werden überwacht, gewartet und kontrolliert weiterentwickelt."},
+      "primary_template": {
+        "template_id": "PA_OPERATING_MODEL_SCALING",
+        "title": "PA-Betriebsmodell und Skalierungsroutine aufbauen",
+        "category": "technical",
+        "applies_to": {"domain": "PA", "dimensions": ["PA_D3"]},
+        "evidence_rules": {"trigger_items_preferred": ["PA_08", "COUP_02", "COUP_04"], "deficit_threshold": 0.55},
+        "goal": "Ein Betriebsmodell mit Monitoring, Wartungsroutine und Verantwortlichkeiten ist für produktive PA/Automationen etabliert.",
+        "deliverables": [
+          "Betriebsmodell (On-Call/Support, Verantwortlichkeiten, SLAs) für PA/Automationen inkl. Runbooks.",
+          "Monitoring-Set (Verfügbarkeit, Daten-/Output-Qualität, Drift-Indikatoren) mit Alerting.",
+          "Regelmäßige Betriebsroutine (monatliches Review, Re-Training/Anpassung, Capacity-Plan) mit Protokoll."
+        ],
+        "kpi": {
+          "name": "MTTR produktiver Automationen",
+          "target": "<= 8 Stunden mittlere Wiederherstellungszeit",
+          "measurement": "MTTR aus Incident-Tickets: Zeit von Störungsmeldung bis Wiederherstellung.",
+          "frequency": "monatlich",
+          "source_system": "Ticket-/Incident-System + Monitoring",
+          "owner_role": "Service Owner"
+        },
+        "estimates": {"impact": 4, "effort": 4, "rationale": "Hoher Nutzen für Stabilität, aber höherer Aufwand durch Monitoring und Prozessaufbau."},
+        "sequencing": {"hard_dependencies": ["PA_PIPELINE_INDUSTRIALIZATION"], "soft_dependencies": [], "gate_rules": []}
+      }
+    }
+  }
+}

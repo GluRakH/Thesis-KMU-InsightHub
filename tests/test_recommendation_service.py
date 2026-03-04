@@ -53,6 +53,12 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertEqual(self.service._gap_weight("L1", "BI", {"BI": 10}), 1.6)
         self.assertEqual(self.service._gap_weight("L4", "BI", {"BI": 2}), 1.0)
 
+
+    def test_build_deficit_statement_contains_dimension_and_score(self) -> None:
+        statement = self.service._build_deficit_statement("BI_D1", 22.5)
+        self.assertIn("BI_D1", statement)
+        self.assertIn("22.5", statement)
+
     def test_priority_score_effort_zero_is_protected(self) -> None:
         score = self.service.calculate_priority_score(impact=4, effort=0, criticality_weight=1.3, gap_weight=1.15)
         self.assertAlmostEqual(score, 5.98)

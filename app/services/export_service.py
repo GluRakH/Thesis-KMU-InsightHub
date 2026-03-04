@@ -51,23 +51,42 @@ def build_export_payload(
     }
     if catalog:
         sorted_measures = sorted(catalog.measures, key=lambda item: item.suggested_priority)
-        for measure in sorted_measures:
+        for index, measure in enumerate(sorted_measures, start=1):
             priority = dict(measure.priority or {})
             priority.setdefault("impact", float(measure.impact))
             priority.setdefault("effort", float(measure.effort))
             priority.setdefault("criticality_weight", 1.0)
             priority.setdefault("gap_weight", 1.0)
-            priority.setdefault("score", measure.priority_score)
+            score = measure.priority_score
+            if not score:
+                score = (
+                    (priority["impact"] / max(1.0, priority["effort"]))
+                    * priority["criticality_weight"]
+                    * priority["gap_weight"]
+                )
+            priority["score"] = round(float(score), 4)
+
+            if not priority.get("bucket"):
+                if index <= 2:
+                    priority["bucket"] = "now"
+                elif index <= 4:
+                    priority["bucket"] = "next"
+                else:
+                    priority["bucket"] = "later"
 
             kpi = dict(measure.kpi or {})
             kpi.setdefault("name", f"Fortschritt {measure.dimension or 'N/A'}")
-            kpi.setdefault("target", "n/a")
-            kpi.setdefault("measurement", "n/a")
+            kpi.setdefault("target", "Mindestwert >= aktueller Baseline")
+            kpi.setdefault("measurement", "Monatlicher Mittelwert der Dimensions-Items (0-100)")
+
+            goal = measure.goal or (
+                f"Erreiche in {measure.dimension or 'N/A'} den nächsten stabilen Reifezustand durch '{measure.title or 'Maßnahme'}'."
+            )
 
             payload = {
                 "id": measure.initiative_id or measure.measure_id or "N/A",
                 "title": measure.title or "Ohne Titel",
-                "goal": measure.goal or "n/a",
+                "goal": goal,
                 "priority": priority,
                 "dependencies": measure.dependencies,
                 "kpi": kpi,

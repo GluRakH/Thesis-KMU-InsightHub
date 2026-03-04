@@ -81,6 +81,9 @@ class BIAssessment(VersionedModel):
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     dimension_levels: dict[str, str] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
+    critical_dimension_id: str = Field(default="")
+    critical_dimension_severity: float = Field(default=0.0)
+    critical_dimension_top_items: list[dict[str, object]] = Field(default_factory=list)
     questionnaire_version: str = Field(default="")
     scoring_version: str = Field(default="")
 
@@ -95,6 +98,9 @@ class PAAssessment(VersionedModel):
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     dimension_levels: dict[str, str] = Field(default_factory=dict)
     findings: dict[str, str] = Field(default_factory=dict)
+    critical_dimension_id: str = Field(default="")
+    critical_dimension_severity: float = Field(default=0.0)
+    critical_dimension_top_items: list[dict[str, object]] = Field(default_factory=list)
     questionnaire_version: str = Field(default="")
     scoring_version: str = Field(default="")
 

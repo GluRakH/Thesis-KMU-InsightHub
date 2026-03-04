@@ -1,25 +1,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from adapters.llm_client import LLMClient
+from app.services.initiative_templates import template_for_dimension
 from domain.models import CatalogStatus, Measure, MeasureCatalog, MeasureCategory, Synthesis
-
-
-@dataclass(frozen=True)
-class _MeasureSpec:
-    title: str
-    category: MeasureCategory
-    impact: int
-    effort: int
-    description_template: str
-    measure_class: str
-    prerequisites: list[str]
-    dependencies: list[str]
 
 
 class RecommendationService:
@@ -32,7 +20,7 @@ class RecommendationService:
         self._llm_client = llm_client or LLMClient(dry_run=True)
         self._config_path = config_path or Path("app/config/recommendation_catalog_v1.0.json")
         self._scoring_dir = scoring_dir or Path("app/config")
-        self._config = self._load_config()
+        self._question_meta = self._load_question_meta()
 
     def generate_catalog(
         self,
@@ -47,93 +35,61 @@ class RecommendationService:
         answers: dict[str, Any] | None = None,
         target_level_by_domain: dict[str, int] | None = None,
     ) -> MeasureCatalog:
-        level_by_dimension = {**(bi_dimension_levels or {}), **(pa_dimension_levels or {})}
+        del use_llm_texts  # 1.2.0 bleibt deterministisch ohne LLM-Texte.
+        answers_payload = answers or {}
         scores = {**bi_dimension_scores, **pa_dimension_scores}
-
-        if not level_by_dimension:
-            level_by_dimension = {
+        levels = {**(bi_dimension_levels or {}), **(pa_dimension_levels or {})}
+        if not levels:
+            levels = {
                 dimension: (bi_maturity_label if dimension.startswith("BI_") else pa_maturity_label)
                 for dimension in scores
             }
 
-        evidence_by_dimension = self._extract_evidence_by_dimension(answers or {})
+        evidence_by_dimension, severity_by_dimension = self._extract_evidence_by_dimension(answers_payload)
         critical_weights = self._criticality_weights(scores)
 
-        specs: list[tuple[str, str, float, _MeasureSpec]] = []
-        for dimension, level in level_by_dimension.items():
-            score = scores.get(dimension, 0.0)
-            spec = self._resolve_spec_for_dimension(dimension, level)
-            if spec:
-                specs.append((dimension, level, score, spec))
-
-        if not specs:
-            fallback = self._resolve_fallback_spec()
-            if fallback:
-                specs.append(("GLOBAL", "N/A", 0.0, fallback))
-
-        factors = synthesis.context_factors or {"GLOBAL": 1.0}
-
-        ranked_specs = sorted(
-            specs,
-            key=lambda item: (100 - item[2]) * factors.get(item[0], factors.get("GLOBAL", 1.0)),
-            reverse=True,
-        )
-
-        llm_texts: list[str] = []
-        if use_llm_texts:
-            llm_texts = self._llm_client.draft_measures(
-                [spec.title for _, _, _, spec in ranked_specs],
-                max_measures=len(ranked_specs),
-            )
-
+        ranked_dimensions = sorted(scores.items(), key=lambda item: item[1])
         measures: list[Measure] = []
         sequence_by_domain: dict[str, int] = {"BI": 0, "PA": 0, "GLOBAL": 0}
-        for index, (dimension, level, score, spec) in enumerate(ranked_specs, start=1):
-            domain = "BI" if dimension.startswith("BI_") else "PA" if dimension.startswith("PA_") else "GLOBAL"
+
+        for dimension, _ in ranked_dimensions:
+            template = template_for_dimension(dimension)
+            level = levels.get(dimension, "L1")
+            domain = self._domain_from_dimension(dimension)
             sequence_by_domain[domain] = sequence_by_domain.get(domain, 0) + 1
-            initiative_id = self._build_initiative_id(domain, spec.category, sequence_by_domain[domain])
+            initiative_id = self._build_initiative_id(domain, template.category, sequence_by_domain[domain])
 
-            llm_suffix = ""
-            if index - 1 < len(llm_texts):
-                llm_suffix = f" LLM-Hinweis: {llm_texts[index - 1]}"
-
-            impact = max(1, int(spec.impact or 1))
-            effort = max(1, int(spec.effort or 1))
+            impact = max(1, int(template.impact))
+            effort = max(1, int(template.effort))
             criticality_weight = critical_weights.get(dimension, 1.0)
             gap_weight = self._gap_weight(level, domain, target_level_by_domain or {})
-            priority_score = self.calculate_priority_score(
-                impact=impact,
-                effort=effort,
-                criticality_weight=criticality_weight,
-                gap_weight=gap_weight,
-            )
+            priority_score = self.calculate_priority_score(impact, effort, criticality_weight, gap_weight)
 
             triggers = evidence_by_dimension.get(dimension, [])[:3]
-            description = (
-                f"{spec.description_template} Bezug: {synthesis.priority_focus}. "
-                f"Heuristik: {synthesis.heuristic_reason}.{llm_suffix}"
-            )
+            diagnosis = self._build_diagnosis(template.diagnosis_template, dimension, triggers)
+            kpi_target = template.kpi_target_template.format(target_level=self._target_score(level, domain, target_level_by_domain or {}))
 
             measures.append(
                 Measure(
                     measure_id=f"mea-{uuid4().hex[:12]}",
                     initiative_id=initiative_id,
-                    title=spec.title,
-                    description=description.strip(),
-                    category=spec.category,
+                    title=template.title,
+                    description=diagnosis,
+                    category=template.category,
                     dimension=dimension,
                     maturity_label=level,
-                    measure_class=spec.measure_class,
+                    measure_class=template.template_id,
                     impact=impact,
                     effort=effort,
                     priority_score=priority_score,
-                    prerequisites=spec.prerequisites,
-                    dependencies=list(spec.dependencies),
-                    suggested_priority=index,
-                    goal=f"Erreiche in {dimension} den nächsten stabilen Reifezustand durch '{spec.title}'.",
+                    prerequisites=[],
+                    dependencies=[],
+                    suggested_priority=1,
+                    goal=template.goal,
                     evidence={
-                        "deficit_statement": self._build_deficit_statement(dimension, score),
+                        "deficit_statement": self._build_deficit_statement(dimension, scores.get(dimension, 0.0)),
                         "trigger_items": triggers,
+                        "severity": severity_by_dimension.get(dimension, 0.0),
                     },
                     priority={
                         "impact": float(impact),
@@ -142,26 +98,19 @@ class RecommendationService:
                         "gap_weight": gap_weight,
                         "score": priority_score,
                     },
-                    kpi={
-                        "name": f"Fortschritt {dimension}",
-                        "target": f"Mindestwert {self._target_score(level, domain, target_level_by_domain or {})}",
-                        "measurement": "Monatlicher Mittelwert der Dimensions-Items (0-100)",
-                    },
-                    deliverables=self._default_deliverables(spec.measure_class, dimension),
+                    kpi={"name": template.kpi_name, "target": kpi_target, "measurement": template.kpi_measurement},
+                    deliverables=list(template.deliverables),
                 )
             )
 
-        self._apply_governance_gate(measures, scores)
-        now_next_later = self._build_now_next_later(measures)
-        ordered_ids = now_next_later["now"] + now_next_later["next"] + now_next_later["later"]
-        order_map = {item_id: idx + 1 for idx, item_id in enumerate(ordered_ids)}
-        bucket_map = {
-            item_id: bucket_name
-            for bucket_name, item_ids in now_next_later.items()
-            for item_id in item_ids
-        }
+        self._apply_governance_gate(measures, severity_by_dimension)
+        self._apply_data_quality_gate(measures, severity_by_dimension)
+        buckets = self._build_now_next_later(measures)
+        ordered_ids = buckets["now"] + buckets["next"] + buckets["later"]
+        order_map = {initiative_id: idx + 1 for idx, initiative_id in enumerate(ordered_ids)}
+        bucket_map = {initiative_id: bucket for bucket, ids in buckets.items() for initiative_id in ids}
         for measure in measures:
-            measure.suggested_priority = order_map.get(measure.initiative_id, measure.suggested_priority)
+            measure.suggested_priority = order_map.get(measure.initiative_id, 999)
             measure.priority["bucket"] = bucket_map.get(measure.initiative_id, "later")
 
         return MeasureCatalog(
@@ -170,18 +119,18 @@ class RecommendationService:
             status=CatalogStatus.DRAFT,
             synthesis_id=synthesis.synthesis_id,
             measures=sorted(measures, key=lambda item: item.suggested_priority),
-            model_version="recommendation-v1.1.0",
-            prompt_version="recommendation-v1.1.0",
+            model_version="recommendation-v1.2.0",
+            prompt_version="recommendation-v1.2.0",
         )
 
     @staticmethod
-    def calculate_deficit_score(answer: Any, min_value: float = 1.0, max_value: float = 5.0) -> float:
+    def calculate_deficit_score(answer: Any, min_value: float = 1.0, max_value: float = 5.0) -> float | None:
         if max_value <= min_value:
-            return 0.0
+            return None
         try:
             value = float(answer)
         except (TypeError, ValueError):
-            return 0.0
+            return None
 
         normalized = 1 - ((value - min_value) / (max_value - min_value))
         return round(max(0.0, min(1.0, normalized)), 4)
@@ -189,46 +138,44 @@ class RecommendationService:
     @staticmethod
     def calculate_priority_score(impact: int, effort: int, criticality_weight: float, gap_weight: float) -> float:
         safe_effort = max(1, effort)
-        score = (impact / safe_effort) * criticality_weight * gap_weight
-        return round(score, 4)
+        return (impact / safe_effort) * criticality_weight * gap_weight
 
-    def _extract_evidence_by_dimension(self, answers: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    def _extract_evidence_by_dimension(self, answers: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, float]]:
         evidence: dict[str, list[dict[str, Any]]] = {}
+        severity_by_dimension: dict[str, float] = {}
         for scoring_path in (self._scoring_dir / "scoring_bi_v1.0.json", self._scoring_dir / "scoring_pa_v1.0.json"):
             if not scoring_path.exists():
                 continue
             with scoring_path.open("r", encoding="utf-8") as handle:
                 scoring_payload = json.load(handle)
-
-            dimensions = scoring_payload.get("dimensions", {})
-            for dimension_id, dimension_meta in dimensions.items():
-                trigger_items: list[dict[str, Any]] = []
+            for dimension_id, dimension_meta in scoring_payload.get("dimensions", {}).items():
+                items: list[dict[str, Any]] = []
                 for question_id in dimension_meta.get("questions", []):
-                    answer = answers.get(question_id)
-                    deficit_score = self.calculate_deficit_score(answer)
-                    if answer is None:
+                    if question_id not in answers:
                         continue
-                    trigger_items.append(
-                        {
-                            "item_id": question_id,
-                            "answer": answer,
-                            "deficit_score": deficit_score,
-                        }
-                    )
+                    min_v, max_v = self._question_meta.get(question_id, (1.0, 5.0))
+                    deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v)
+                    if deficit is None:
+                        continue
+                    items.append({"item_id": question_id, "answer": answers.get(question_id), "deficit_score": deficit})
 
-                trigger_items.sort(key=lambda item: item["deficit_score"], reverse=True)
-                evidence[dimension_id] = trigger_items[:3]
-
-        return evidence
+                items.sort(key=lambda x: x["deficit_score"], reverse=True)
+                top_items = items[:3]
+                evidence[dimension_id] = top_items
+                if top_items:
+                    severity_by_dimension[dimension_id] = round(sum(x["deficit_score"] for x in top_items) / len(top_items), 4)
+                else:
+                    severity_by_dimension[dimension_id] = 0.0
+        return evidence, severity_by_dimension
 
     @staticmethod
     def _criticality_weights(dimension_scores: dict[str, float]) -> dict[str, float]:
         ordered = sorted(dimension_scores.items(), key=lambda item: item[1])
         weights: dict[str, float] = {}
-        for index, (dimension, _) in enumerate(ordered):
-            if index == 0:
-                weights[dimension] = 1.3
-            elif index <= 2:
+        for rank, (dimension, _) in enumerate(ordered, start=1):
+            if rank == 1:
+                weights[dimension] = 1.30
+            elif rank == 2:
                 weights[dimension] = 1.15
             else:
                 weights[dimension] = 1.0
@@ -236,23 +183,22 @@ class RecommendationService:
 
     @staticmethod
     def _gap_weight(level_label: str, domain: str, target_level_by_domain: dict[str, int]) -> float:
-        target = target_level_by_domain.get(domain)
+        defaults = {"BI": 3, "PA": 3}
+        target = target_level_by_domain.get(domain, defaults.get(domain))
         if target is None:
             return 1.0
         try:
             current = int(level_label.replace("L", ""))
         except ValueError:
             return 1.0
-
         gap = max(0, target - current)
-        return round(min(1.6, 1.0 + (gap * 0.15)), 2)
+        return round(max(1.0, min(1.6, 1.0 + gap * 0.15)), 2)
 
     @staticmethod
     def _target_score(level_label: str, domain: str, target_level_by_domain: dict[str, int]) -> str:
-        target = target_level_by_domain.get(domain)
-        if target is None:
-            return ">= aktueller Baseline"
-        return f"L{target} (ausgehend von {level_label})"
+        defaults = {"BI": 3, "PA": 3}
+        target = target_level_by_domain.get(domain, defaults.get(domain))
+        return f"L{target} (ausgehend von {level_label})" if target else ">= aktueller Baseline"
 
     @staticmethod
     def _build_initiative_id(domain: str, category: MeasureCategory, sequence: int) -> str:
@@ -263,95 +209,96 @@ class RecommendationService:
         return f"Dimension {dimension} liegt mit {score:.2f} unter dem Zielkorridor und erzeugt Umsetzungsdefizite."
 
     @staticmethod
-    def _default_deliverables(measure_class: str, dimension: str) -> list[str]:
-        return [
-            f"Ist-Analyse und Scope für {dimension}",
-            f"Maßnahmenplan '{measure_class}' inkl. Verantwortlichkeiten",
-            "Pilotierte Umsetzung mit Review",
-        ]
+    def _domain_from_dimension(dimension: str) -> str:
+        if dimension.startswith("BI_"):
+            return "BI"
+        if dimension.startswith("PA_"):
+            return "PA"
+        return "GLOBAL"
 
     @staticmethod
-    def _governance_basics_missing(dimension_scores: dict[str, float], domain: str) -> bool:
-        governance_dimension = f"{domain}_D1"
-        governance_score = dimension_scores.get(governance_dimension, 100.0)
-        return governance_score < 50.0
+    def _build_diagnosis(template: str, dimension: str, triggers: list[dict[str, Any]]) -> str:
+        if triggers:
+            trigger_summary = ", ".join(
+                f"{item['item_id']}={item['answer']} (deficit {item['deficit_score']:.2f})" for item in triggers[:3]
+            )
+        else:
+            trigger_summary = "keine verwertbaren Trigger-Items"
+        return template.format(dimension=dimension, trigger_summary=trigger_summary)
 
-    def _apply_governance_gate(self, measures: list[Measure], dimension_scores: dict[str, float]) -> None:
-        governance_by_domain: dict[str, list[Measure]] = {"BI": [], "PA": []}
+    @staticmethod
+    def _governance_basics_missing(severity_by_dimension: dict[str, float], domain: str) -> bool:
+        return severity_by_dimension.get(f"{domain}_D1", 0.0) > 0.6
+
+    def _apply_governance_gate(self, measures: list[Measure], severity_by_dimension: dict[str, float]) -> None:
+        governance_by_domain = {
+            "BI": [m for m in measures if m.dimension.startswith("BI_") and m.category == MeasureCategory.GOVERNANCE],
+            "PA": [m for m in measures if m.dimension.startswith("PA_") and m.category == MeasureCategory.GOVERNANCE],
+        }
         for measure in measures:
-            domain = "BI" if measure.dimension.startswith("BI_") else "PA" if measure.dimension.startswith("PA_") else "GLOBAL"
-            if domain in governance_by_domain and measure.category == MeasureCategory.GOVERNANCE:
-                governance_by_domain[domain].append(measure)
-
-        for measure in measures:
-            domain = "BI" if measure.dimension.startswith("BI_") else "PA" if measure.dimension.startswith("PA_") else "GLOBAL"
-            if domain not in ("BI", "PA"):
+            domain = self._domain_from_dimension(measure.dimension)
+            if domain not in ("BI", "PA") or measure.category == MeasureCategory.GOVERNANCE:
                 continue
-            if measure.category == MeasureCategory.GOVERNANCE:
+            if not self._governance_basics_missing(severity_by_dimension, domain):
                 continue
-            if not self._governance_basics_missing(dimension_scores, domain):
-                continue
-
             governors = governance_by_domain.get(domain, [])
-            if not governors:
+            if governors:
+                dependency_id = governors[0].initiative_id
+                if dependency_id not in measure.dependencies:
+                    measure.dependencies.append(dependency_id)
+
+    @staticmethod
+    def _apply_data_quality_gate(measures: list[Measure], severity_by_dimension: dict[str, float]) -> None:
+        dq_candidates = [m for m in measures if m.dimension == "BI_D2" and m.category == MeasureCategory.DATA]
+        if not dq_candidates or severity_by_dimension.get("BI_D2", 0.0) <= 0.55:
+            return
+        dq_id = dq_candidates[0].initiative_id
+        for measure in measures:
+            if measure.initiative_id == dq_id:
                 continue
-            gate_dependency = governors[0].initiative_id
-            if gate_dependency not in measure.dependencies:
-                measure.dependencies.append(gate_dependency)
+            advanced = (
+                measure.dimension in {"BI_D3", "PA_D3"}
+                or (measure.category == MeasureCategory.TECHNICAL and measure.dimension in {"BI_D2", "PA_D2"})
+            )
+            if advanced and dq_id not in measure.dependencies:
+                measure.dependencies.append(dq_id)
 
     @staticmethod
     def _build_now_next_later(measures: list[Measure]) -> dict[str, list[str]]:
-        ordered = sorted(measures, key=lambda item: item.priority_score, reverse=True)
-        buckets: dict[str, list[str]] = {"now": [], "next": [], "later": []}
-        domain_now_count: dict[str, int] = {"BI": 0, "PA": 0, "GLOBAL": 0}
-        deferred: list[Measure] = []
+        ordered = sorted(measures, key=lambda m: (-m.priority_score, m.initiative_id))
+        buckets = {"now": [], "next": [], "later": []}
+        domain_now_count = {"BI": 0, "PA": 0, "GLOBAL": 0}
 
         for measure in ordered:
-            domain = "BI" if measure.dimension.startswith("BI_") else "PA" if measure.dimension.startswith("PA_") else "GLOBAL"
-            dependencies = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
-
-            if not dependencies and domain_now_count.get(domain, 0) < 2:
+            domain = RecommendationService._domain_from_dimension(measure.dimension)
+            deps = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
+            deps_in_now = all(dep in buckets["now"] for dep in deps)
+            if len(buckets["now"]) < 4 and domain_now_count.get(domain, 0) < 2 and deps_in_now:
                 buckets["now"].append(measure.initiative_id)
                 domain_now_count[domain] = domain_now_count.get(domain, 0) + 1
-            else:
-                deferred.append(measure)
 
-        for measure in deferred:
-            dependencies = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
-            if all(dep in buckets["now"] for dep in dependencies):
+        for measure in ordered:
+            if measure.initiative_id in buckets["now"]:
+                continue
+            deps = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
+            if all(dep in buckets["now"] for dep in deps):
                 buckets["next"].append(measure.initiative_id)
-            elif all(dep in (buckets["now"] + buckets["next"]) for dep in dependencies):
-                buckets["later"].append(measure.initiative_id)
             else:
                 buckets["later"].append(measure.initiative_id)
 
         return buckets
 
-    def _resolve_spec_for_dimension(self, dimension: str, level: str) -> _MeasureSpec | None:
-        entry = self._config.get("dimension_level_mapping", {}).get(dimension, {}).get(level)
-        if not entry:
-            return None
-        return self._to_spec(entry)
-
-    def _resolve_fallback_spec(self) -> _MeasureSpec | None:
-        entry = self._config.get("fallback")
-        if not entry:
-            return None
-        return self._to_spec(entry)
-
-    def _load_config(self) -> dict:
-        with self._config_path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
-
-    @staticmethod
-    def _to_spec(entry: dict) -> _MeasureSpec:
-        return _MeasureSpec(
-            title=str(entry["title"]),
-            category=MeasureCategory(str(entry["category"])),
-            impact=int(entry.get("impact", 1)),
-            effort=int(entry.get("effort", 1)),
-            description_template=str(entry.get("description_template", "")),
-            measure_class=str(entry.get("measure_class", "Fundament schaffen")),
-            prerequisites=[str(x) for x in entry.get("prerequisites", [])],
-            dependencies=[str(x) for x in entry.get("dependencies", [])],
-        )
+    def _load_question_meta(self) -> dict[str, tuple[float, float]]:
+        path = self._scoring_dir / "questionnaire_v1.0.json"
+        if not path.exists():
+            return {}
+        with path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        result: dict[str, tuple[float, float]] = {}
+        for question in payload.get("questions", []):
+            q_id = question.get("id")
+            scale = question.get("scale") or {}
+            if not q_id:
+                continue
+            result[str(q_id)] = (float(scale.get("min", 1)), float(scale.get("max", 5)))
+        return result

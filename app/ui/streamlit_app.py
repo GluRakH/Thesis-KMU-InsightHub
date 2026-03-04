@@ -60,7 +60,6 @@ def _init_state() -> None:
         "answers": {},
         "validation": None,
         "pipeline": None,
-        "selection_editor": [],
         "ollama_api_key": "",
         "use_llm_texts": False,
     }
@@ -471,6 +470,9 @@ def _render_measures() -> None:
         )
 
     st.write("Katalog bearbeiten:")
+    if "selection_editor" in st.session_state and not isinstance(st.session_state["selection_editor"], dict):
+        del st.session_state["selection_editor"]
+
     edited = st.data_editor(
         editor_data,
         use_container_width=True,

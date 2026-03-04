@@ -79,42 +79,47 @@ def _build_llm_client() -> LLMClient:
     return LLMClient(dry_run=False)
 
 
-def _render_option_checkboxes(
+def _render_multi_choice_checkboxes(
     question_id: str,
     label: str,
     options: list[object],
     current_value: object,
-    multi: bool,
-) -> object:
+) -> list[str]:
     st.markdown(f"**{label}**")
     if not options:
-        return [] if multi else ""
+        return []
 
-    if multi:
-        selected: list[str] = []
-        default_values = current_value if isinstance(current_value, list) else []
-        columns = st.columns(min(3, max(1, len(options))))
-        for idx, option in enumerate(options):
-            key = f"q_{question_id}_opt_{idx}"
-            with columns[idx % len(columns)]:
-                checked = st.checkbox(str(option), value=str(option) in [str(x) for x in default_values], key=key)
-            if checked:
-                selected.append(str(option))
-        return selected
-
-    selected_option = str(current_value) if current_value in options else str(options[0])
-    columns = st.columns(min(5, max(1, len(options))))
-    checked_options: list[str] = []
+    selected: list[str] = []
+    default_values = current_value if isinstance(current_value, list) else []
+    columns = st.columns(min(3, max(1, len(options))))
     for idx, option in enumerate(options):
-        key = f"q_{question_id}_single_{idx}"
+        key = f"q_{question_id}_opt_{idx}"
         with columns[idx % len(columns)]:
-            checked = st.checkbox(str(option), value=str(option) == selected_option, key=key)
+            checked = st.checkbox(str(option), value=str(option) in [str(x) for x in default_values], key=key)
         if checked:
-            checked_options.append(str(option))
+            selected.append(str(option))
+    return selected
 
-    if not checked_options:
-        return str(options[0])
-    return checked_options[0]
+
+def _render_single_choice(
+    question_id: str,
+    label: str,
+    options: list[object],
+    current_value: object,
+) -> object:
+    if not options:
+        return None
+
+    normalized_options = [str(option) for option in options]
+    default_index = normalized_options.index(str(current_value)) if str(current_value) in normalized_options else None
+
+    return st.radio(
+        label,
+        options=normalized_options,
+        index=default_index,
+        horizontal=True,
+        key=f"q_{question_id}",
+    )
 
 
 def _render_question(question: dict, current_value: object) -> object:
@@ -126,10 +131,10 @@ def _render_question(question: dict, current_value: object) -> object:
         return st.text_area(label, value=current_value or "", key=f"q_{question_id}")
 
     if q_type == QuestionType.SINGLE_CHOICE:
-        return _render_option_checkboxes(question_id, label, question.get("options", []), current_value, multi=False)
+        return _render_single_choice(question_id, label, question.get("options", []), current_value)
 
     if q_type == QuestionType.MULTI_CHOICE:
-        return _render_option_checkboxes(question_id, label, question.get("options", []), current_value, multi=True)
+        return _render_multi_choice_checkboxes(question_id, label, question.get("options", []), current_value)
 
     if q_type == QuestionType.NUMBER:
         default_value = float(current_value) if isinstance(current_value, (int, float)) else 0.0
@@ -140,8 +145,8 @@ def _render_question(question: dict, current_value: object) -> object:
         min_value = int(scale.get("min", 1))
         max_value = int(scale.get("max", 5))
         options = list(range(min_value, max_value + 1))
-        selected = _render_option_checkboxes(question_id, label, options, current_value, multi=False)
-        return int(selected)
+        selected = _render_single_choice(question_id, label, options, current_value)
+        return None if selected is None else int(selected)
 
     raise ValueError(f"Unbekannter Fragetyp: {q_type}")
 
@@ -256,11 +261,16 @@ def _load_latest_pipeline(answer_set_id: str) -> PipelineResult | None:
 
 def _render_header() -> str:
     st.title("InsightHub")
-    cols = st.columns(len(STEP_ORDER))
-    for index, step in enumerate(STEP_ORDER):
-        button_type = "primary" if st.session_state["active_step"] == step else "secondary"
-        if cols[index].button(STEP_LABELS[step], use_container_width=True, type=button_type):
-            st.session_state["active_step"] = step
+    current_step = st.radio(
+        "Prozessschritte",
+        options=STEP_ORDER,
+        index=STEP_ORDER.index(st.session_state["active_step"]),
+        horizontal=True,
+        format_func=lambda step: STEP_LABELS[step],
+        key="step_navigation",
+        label_visibility="collapsed",
+    )
+    st.session_state["active_step"] = current_step
 
     st.progress((STEP_ORDER.index(st.session_state["active_step"]) + 1) / len(STEP_ORDER))
     return st.session_state["active_step"]

@@ -112,6 +112,40 @@ class LLMClient:
 
         return [line.strip("- •\t ") for line in content.splitlines() if line.strip()][:max_measures]
 
+    def summarize_measure_catalog(
+        self,
+        focus: str,
+        measures_by_bucket: dict[str, list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        payload = {
+            "focus": focus,
+            "measures_by_bucket": measures_by_bucket,
+        }
+        prompt = (
+            "Fasse den Maßnahmenkatalog auf Deutsch, übersichtlich und verständlich zusammen. "
+            "Gib nur JSON zurück mit den Feldern "
+            "'headline', 'executive_summary', 'now', 'next', 'later', 'risks_and_dependencies', 'first_30_days'."
+        )
+        content = self._run_text_task("summarize_measure_catalog", prompt, payload, output_key="catalog_summary")
+
+        try:
+            parsed = json.loads(content) if isinstance(content, str) else content
+        except json.JSONDecodeError:
+            parsed = {}
+
+        if not isinstance(parsed, dict):
+            parsed = {}
+
+        return {
+            "headline": str(parsed.get("headline") or "Ergebnis Maßnahmenkatalog"),
+            "executive_summary": str(parsed.get("executive_summary") or "Keine Zusammenfassung verfügbar."),
+            "now": [str(item) for item in parsed.get("now", [])][:3],
+            "next": [str(item) for item in parsed.get("next", [])][:3],
+            "later": [str(item) for item in parsed.get("later", [])][:3],
+            "risks_and_dependencies": [str(item) for item in parsed.get("risks_and_dependencies", [])][:4],
+            "first_30_days": [str(item) for item in parsed.get("first_30_days", [])][:4],
+        }
+
     def check_connection(self) -> dict[str, Any]:
         if self.dry_run:
             return {
@@ -280,4 +314,23 @@ class LLMClient:
                 "Priorität 3: Monatliches Review mit Fachbereich und IT etablieren.",
             ]
             return json.dumps({"measures": measures}, ensure_ascii=False)
+        if task_name == "summarize_measure_catalog":
+            return json.dumps(
+                {
+                    "headline": "Ergebnis Maßnahmenkatalog",
+                    "executive_summary": "[Dummy] Der Katalog priorisiert zuerst Basismaßnahmen mit hohem Hebel und reduziert so kurzfristig die größten Reifegradlücken.",
+                    "now": [
+                        "Governance-Grundlagen und Rollen verbindlich festlegen.",
+                        "Datenqualitätsprobleme in den kritischsten Feldern systematisch beheben.",
+                    ],
+                    "next": ["Skalierbare Analytics-/Automations-Standards in den Fachbereichen ausrollen."],
+                    "later": ["Erweiterte Use Cases nach stabiler Daten- und Prozessbasis schrittweise industrialisieren."],
+                    "risks_and_dependencies": ["Abhängigkeit von Datenqualität und klarer Ownership vor technischen Ausbaustufen."],
+                    "first_30_days": [
+                        "Sponsor und Kernteam benennen.",
+                        "Top-3-Maßnahmen in konkrete Arbeitspakete mit Verantwortlichen überführen.",
+                    ],
+                },
+                ensure_ascii=False,
+            )
         return "[Dummy] Kein Ergebnis verfügbar."

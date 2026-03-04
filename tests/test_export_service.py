@@ -180,6 +180,30 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertEqual(len(later["deliverables"]), 3)
         self.assertIn("KPI: Abgedeckte kritische Datenobjekte mit benanntem Owner", markdown)
 
+
+    def test_export_v12_appends_catalog_summary_section(self) -> None:
+        pipeline = {
+            "bi": {"critical_dimension_id": "BI_D1", "critical_dimension_severity": 0.7},
+            "pa": {"critical_dimension_id": "PA_D1", "critical_dimension_severity": 0.6},
+            "synthesis": {"combined_summary": "combo", "recommendation": "reco"},
+        }
+        summary = {
+            "headline": "Ergebnis Maßnahmenkatalog",
+            "executive_summary": "Die priorisierten Maßnahmen stabilisieren zuerst Grundlagen.",
+            "now": ["Governance aufsetzen"],
+            "next": ["Standards ausrollen"],
+            "later": ["Skalierung"],
+            "risks_and_dependencies": ["Datenqualität als Voraussetzung"],
+            "first_30_days": ["Kernteam benennen"],
+        }
+
+        payload = build_export_payload(pipeline=pipeline, answers={}, catalog=None, export_version="1.2.0", catalog_summary=summary)
+        markdown = payload_to_markdown(payload)
+
+        self.assertEqual(payload["catalog_summary"]["headline"], "Ergebnis Maßnahmenkatalog")
+        self.assertIn("## Ergebnis Maßnahmenkatalog (LLM)", markdown)
+        self.assertIn("Kernteam benennen", markdown)
+
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {
             "timestamp": datetime(2026, 1, 2, 3, 4, tzinfo=timezone.utc),

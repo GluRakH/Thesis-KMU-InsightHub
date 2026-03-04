@@ -242,6 +242,16 @@ class RecommendationService:
         return template.format(dimension=dimension, trigger_summary=trigger_summary)
 
     @staticmethod
+    def _build_deficit_statement(dimension: str, dimension_score: float) -> str:
+        if dimension_score < 35:
+            severity = "hoher"
+        elif dimension_score < 60:
+            severity = "mittlerer"
+        else:
+            severity = "geringer"
+        return f"{severity.capitalize()} Handlungsbedarf in {dimension} (Score: {dimension_score:.1f})."
+
+    @staticmethod
     def _governance_basics_missing(severity_by_dimension: dict[str, float], domain: str) -> bool:
         return severity_by_dimension.get(f"{domain}_D1", 0.0) > 0.6
 

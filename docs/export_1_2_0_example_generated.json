@@ -1,0 +1,142 @@
+{
+  "export_version": "1.2.0",
+  "timestamp": "2026-03-04T20:00:03.029632+00:00",
+  "summary": {
+    "bi": {
+      "summary": "BI-Reifegrad 2",
+      "dimension_scores": {
+        "BI_D1": 25,
+        "BI_D2": 45,
+        "BI_D3": 60
+      },
+      "critical_dimension_id": "BI_D1",
+      "critical_dimension_severity": 0.79,
+      "critical_dimension_top_items": [
+        {
+          "item_id": "DA_01",
+          "answer": 1,
+          "deficit_score": 1.0
+        },
+        {
+          "item_id": "DA_02",
+          "answer": 2,
+          "deficit_score": 0.75
+        }
+      ]
+    },
+    "pa": {
+      "summary": "PA-Reifegrad 2",
+      "dimension_scores": {
+        "PA_D1": 30,
+        "PA_D2": 50,
+        "PA_D3": 65
+      },
+      "critical_dimension_id": "PA_D1",
+      "critical_dimension_severity": 0.67,
+      "critical_dimension_top_items": [
+        {
+          "item_id": "PA_01",
+          "answer": 2,
+          "deficit_score": 0.75
+        },
+        {
+          "item_id": "PA_02",
+          "answer": 2,
+          "deficit_score": 0.75
+        }
+      ]
+    },
+    "synthesis": {
+      "combined_summary": "Kompakter Überblick",
+      "recommendation": "Governance zuerst"
+    }
+  },
+  "evidence_overview": {
+    "BI": {
+      "critical_dimension": "BI_D1",
+      "critical_dimension_severity": 0.79,
+      "top_items": [
+        {
+          "item_id": "DA_01",
+          "answer": 1,
+          "deficit_score": 1.0
+        },
+        {
+          "item_id": "DA_02",
+          "answer": 2,
+          "deficit_score": 0.75
+        }
+      ]
+    },
+    "PA": {
+      "critical_dimension": "PA_D1",
+      "critical_dimension_severity": 0.67,
+      "top_items": [
+        {
+          "item_id": "PA_01",
+          "answer": 2,
+          "deficit_score": 0.75
+        },
+        {
+          "item_id": "PA_02",
+          "answer": 2,
+          "deficit_score": 0.75
+        }
+      ]
+    }
+  },
+  "recommendations": {
+    "now": [
+      {
+        "id": "INIT-BI-GOVERNANCE-01",
+        "title": "BI-Governance-Basics etablieren",
+        "dimension": "BI_D1",
+        "category": "governance",
+        "priority_score": 3.25,
+        "diagnosis": "In BI_D1 zeigen DA_01=1 (deficit 1.00) und DA_02=2 (deficit 0.75) fehlende Governance-Grundlagen.",
+        "goal": "",
+        "deliverables": [
+          "RACI-Modell verabschieden",
+          "Governance-Board starten",
+          "BI-Richtlinie publizieren"
+        ],
+        "dependencies": [],
+        "kpi": {
+          "name": "Owner-Abdeckung",
+          "target": ">= 90%",
+          "measurement": "Monatliche Katalogprüfung"
+        }
+      }
+    ],
+    "next": [
+      {
+        "id": "INIT-BI-DATA-02",
+        "title": "Datenqualitätsregeln und Monitoring einführen",
+        "dimension": "BI_D2",
+        "category": "data",
+        "priority_score": 1.92,
+        "diagnosis": "DA_05=2 (deficit 0.75) und DA_06=2 (deficit 0.75) zeigen Qualitätsdefizite.",
+        "goal": "",
+        "deliverables": [
+          "DQ-Regelwerk definieren",
+          "DQ-Dashboard bereitstellen",
+          "Quality-Review etablieren"
+        ],
+        "dependencies": [
+          "INIT-BI-GOVERNANCE-01"
+        ],
+        "kpi": {
+          "name": "DQ-Compliance",
+          "target": ">= 95%",
+          "measurement": "Wöchentlicher DQ-Run"
+        }
+      }
+    ],
+    "later": []
+  },
+  "answers": {
+    "DA_01": 1,
+    "DA_02": 2,
+    "PA_01": 2
+  }
+}

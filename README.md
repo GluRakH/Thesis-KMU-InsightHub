@@ -172,3 +172,63 @@ Die folgenden nicht mehr benötigten Artefakte wurden entfernt:
 
 - veraltete Thesis-Dokumente im Projekt-Root (`Thesis.pdf`, `chapter1.tex`, `chapter2.tex`, `chapter3.tex`)
 - leere Platzhalterverzeichnisse unter `app/` (nur `.gitkeep` ohne produktiven Inhalt)
+
+## Export-Versionierung 1.1.0 (deterministische Ableitungslogik)
+
+Die Exportlogik ist versioniert und unterstützt parallel:
+
+- **Export 1.0.0**: bestehender kompakter Markdown-Export (abwärtskompatibel)
+- **Export 1.1.0**: erweiterter Markdown/JSON-Export mit nachvollziehbarer Herleitung
+
+### Deterministische Evidence-Logik
+
+Für jedes Assessment-Item auf einer 1..5-Skala wird ein Defizitwert berechnet:
+
+- `deficit_score = 1 - ((answer - min) / (max - min))`
+- niedrige Antworten erzeugen höhere Defizite
+- fehlende/ungültige Antworten werden robust als `0.0` behandelt
+
+Pro Dimension werden die Top-2 bis Top-3 Items mit höchstem Defizit als `trigger_items` geführt.
+
+### Prioritätsmodell
+
+Der formale Score ist deterministisch definiert als:
+
+- `priority = (impact / effort) * criticality_weight * gap_weight`
+
+Regeln:
+
+- `effort` wird gegen 0 abgesichert (`effort=0 -> 1`)
+- `criticality_weight`: 1.3 für kritischste Dimension, 1.15 für weitere Top-Dimensionen, sonst 1.0
+- `gap_weight`: aus Reifelücke zum Zielniveau; ohne Ziel = 1.0, sonst +0.15 pro Stufe (geclippt auf 1.6)
+
+### Governance-Gate und Buckets
+
+- Governance-First-Heuristik: Bei niedriger Governance-Reife (D1-Score < 50) erhalten Nicht-Governance-Maßnahmen eine Abhängigkeit auf Governance-Maßnahmen derselben Domäne.
+- Bucketing erfolgt in **Now/Next/Later** unter Berücksichtigung der Dependencies.
+- Zusätzlich wird **Now auf max. 2 Maßnahmen pro Domäne** begrenzt.
+
+### Auswahl der Export-Version
+
+In der Streamlit-Ansicht **Export** kann die Version über das Dropdown **Export-Version** gewählt werden:
+
+- `1.0.0` für den Legacy-Export
+- `1.1.0` für den erweiterten wissenschaftlich nachvollziehbaren Export
+
+
+## Export-Versionierung 1.2.0 (konkrete Maßnahmen & deterministische Sequenzierung)
+
+Zusätzlich zu 1.0.0/1.1.0 ist jetzt **Export 1.2.0** verfügbar.
+
+- Evidenzüberblick je Domäne enthält `critical_dimension_id`, `critical_dimension_severity` und Top-Trigger-Items.
+- Maßnahmen werden aus einer deterministischen Template-Registry erzeugt (kein reines „Optimieren: …“).
+- Jede Maßnahme enthält Diagnose, exakt 3 Deliverables, KPI und explizite Dependencies.
+- PriorityScore wird differenziert aus Impact/Effort, Criticality-Rang und Gap-Weight gebildet.
+- NOW/NEXT/LATER wird aus Priorität + Abhängigkeiten gebildet (NOW max. 2 je Domäne, max. 4 gesamt).
+
+### Auswahl der Export-Version
+
+Im Export-Dropdown stehen jetzt zur Verfügung:
+- `1.0.0` (Legacy)
+- `1.1.0` (bestehender erweiterter Export)
+- `1.2.0` (neue konkrete Maßnahmenlogik)

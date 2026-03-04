@@ -250,6 +250,12 @@ def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[
             synthesis = SynthesisService(llm_client=llm_client).synthesize(bi_assessment, pa_assessment, answer_payload)
             repository.save_synthesis(synthesis)
 
+        loaded = repository.load_answer_set(answer_set_id)
+        answer_payload = {}
+        if loaded is not None:
+            _, answers = loaded
+            answer_payload = {answer.question_id: json.loads(answer.value) for answer in answers}
+
         catalog = recommendation_service_with_config.generate_catalog(
             synthesis=synthesis,
             bi_maturity_label=bi_assessment.level_label,
@@ -259,6 +265,7 @@ def run_catalog(answer_set_id: str, request: RunRecommendationsRequest) -> dict[
             bi_dimension_levels=bi_assessment.dimension_levels,
             pa_dimension_levels=pa_assessment.dimension_levels,
             use_llm_texts=request.use_llm_texts,
+            answers=answer_payload,
         )
         repository.save_catalog(catalog)
 

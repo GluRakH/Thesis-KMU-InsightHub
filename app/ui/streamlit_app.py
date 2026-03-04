@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from adapters.llm_client import LLMClient
 from app.services.assessment_service import AssessmentService
+from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
 from app.services.questionnaire_service import QuestionType, QuestionnaireService
 from app.services.recommendation_service import RecommendationService
 from app.services.synthesis_service import SynthesisService
@@ -38,7 +39,7 @@ class PipelineResult:
     synthesis: dict
 
 
-st.set_page_config(page_title="InsightHub Flow", layout="wide")
+st.set_page_config(page_title="InsightHub", layout="wide")
 
 engine = create_sqlite_engine()
 Base.metadata.create_all(engine)
@@ -47,8 +48,14 @@ session_factory = create_session_factory()
 questionnaire_service = QuestionnaireService()
 assessment_service = AssessmentService()
 
-
 STEP_ORDER = ["Start", "Fragebogen", "Ergebnisse", "Maßnahmen", "Export"]
+STEP_LABELS = {
+    "Start": "1. Start",
+    "Fragebogen": "2. Fragebogen",
+    "Ergebnisse": "3. Ergebnisse",
+    "Maßnahmen": "4. Maßnahmen",
+    "Export": "5. Export",
+}
 
 
 def _init_state() -> None:
@@ -60,31 +67,54 @@ def _init_state() -> None:
         "answers": {},
         "validation": None,
         "pipeline": None,
-        "ollama_api_key": "",
-        "use_llm_texts": False,
+        "export_version": "1.1.0",
+        "active_step": "Start",
+        "use_llm_texts": True,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
 
 def _build_llm_client() -> LLMClient:
-    api_key = st.session_state.get("ollama_api_key", "").strip()
-    if api_key:
-        return LLMClient(api_key=api_key, dry_run=False)
-    return LLMClient()
+    return LLMClient(dry_run=False)
 
 
-def _render_llm_settings() -> None:
-    with st.sidebar:
-        st.markdown("### LLM Einstellungen")
-        st.text_input(
-            "Ollama API Key",
-            type="password",
-            key="ollama_api_key",
-            help="Optional: Für abgesicherte lokale Ollama-Instanzen.",
-        )
-        st.toggle("LLM-Texte für Maßnahmen nutzen", key="use_llm_texts")
+def _render_option_checkboxes(
+    question_id: str,
+    label: str,
+    options: list[object],
+    current_value: object,
+    multi: bool,
+) -> object:
+    st.markdown(f"**{label}**")
+    if not options:
+        return [] if multi else ""
 
+    if multi:
+        selected: list[str] = []
+        default_values = current_value if isinstance(current_value, list) else []
+        columns = st.columns(min(3, max(1, len(options))))
+        for idx, option in enumerate(options):
+            key = f"q_{question_id}_opt_{idx}"
+            with columns[idx % len(columns)]:
+                checked = st.checkbox(str(option), value=str(option) in [str(x) for x in default_values], key=key)
+            if checked:
+                selected.append(str(option))
+        return selected
+
+    selected_option = str(current_value) if current_value in options else str(options[0])
+    columns = st.columns(min(5, max(1, len(options))))
+    checked_options: list[str] = []
+    for idx, option in enumerate(options):
+        key = f"q_{question_id}_single_{idx}"
+        with columns[idx % len(columns)]:
+            checked = st.checkbox(str(option), value=str(option) == selected_option, key=key)
+        if checked:
+            checked_options.append(str(option))
+
+    if not checked_options:
+        return str(options[0])
+    return checked_options[0]
 
 
 def _render_question(question: dict, current_value: object) -> object:
@@ -96,14 +126,10 @@ def _render_question(question: dict, current_value: object) -> object:
         return st.text_area(label, value=current_value or "", key=f"q_{question_id}")
 
     if q_type == QuestionType.SINGLE_CHOICE:
-        options = question.get("options", [])
-        fallback = current_value if isinstance(current_value, str) and current_value in options else options[0]
-        return st.selectbox(label, options=options, index=options.index(fallback), key=f"q_{question_id}")
+        return _render_option_checkboxes(question_id, label, question.get("options", []), current_value, multi=False)
 
     if q_type == QuestionType.MULTI_CHOICE:
-        options = question.get("options", [])
-        defaults = current_value if isinstance(current_value, list) else []
-        return st.multiselect(label, options=options, default=defaults, key=f"q_{question_id}")
+        return _render_option_checkboxes(question_id, label, question.get("options", []), current_value, multi=True)
 
     if q_type == QuestionType.NUMBER:
         default_value = float(current_value) if isinstance(current_value, (int, float)) else 0.0
@@ -113,11 +139,11 @@ def _render_question(question: dict, current_value: object) -> object:
         scale = question.get("scale") or {"min": 1, "max": 5}
         min_value = int(scale.get("min", 1))
         max_value = int(scale.get("max", 5))
-        default_value = int(current_value) if isinstance(current_value, (int, float)) else min_value
-        return st.slider(label, min_value=min_value, max_value=max_value, value=default_value, key=f"q_{question_id}")
+        options = list(range(min_value, max_value + 1))
+        selected = _render_option_checkboxes(question_id, label, options, current_value, multi=False)
+        return int(selected)
 
     raise ValueError(f"Unbekannter Fragetyp: {q_type}")
-
 
 
 def _persist_answers(use_case_id: str, answer_set_id: str, version: str, answers: dict, lock: bool = False) -> None:
@@ -143,7 +169,6 @@ def _persist_answers(use_case_id: str, answer_set_id: str, version: str, answers
         )
 
 
-
 def _load_answers(answer_set_id: str) -> dict[str, object]:
     with session_factory() as session:
         loaded = PersistenceRepository(session).load_answer_set(answer_set_id)
@@ -151,7 +176,6 @@ def _load_answers(answer_set_id: str) -> dict[str, object]:
             return {}
         _, answers = loaded
         return {answer.question_id: json.loads(answer.value) for answer in answers}
-
 
 
 def _run_pipeline(answer_set_id: str, version: str) -> PipelineResult:
@@ -174,7 +198,6 @@ def _run_pipeline(answer_set_id: str, version: str) -> PipelineResult:
         pa=pa_assessment.model_dump(),
         synthesis=synthesis.model_dump(),
     )
-
 
 
 def _load_latest_pipeline(answer_set_id: str) -> PipelineResult | None:
@@ -231,12 +254,16 @@ def _load_latest_pipeline(answer_set_id: str) -> PipelineResult | None:
     )
 
 
-
 def _render_header() -> str:
-    st.title("InsightHub – Streamlit End-to-End Flow")
-    st.caption("Vom Use Case bis zum Maßnahmen-Export ohne manuelle API Calls")
-    return st.radio("Schritt", STEP_ORDER, horizontal=True)
+    st.title("InsightHub")
+    cols = st.columns(len(STEP_ORDER))
+    for index, step in enumerate(STEP_ORDER):
+        button_type = "primary" if st.session_state["active_step"] == step else "secondary"
+        if cols[index].button(STEP_LABELS[step], use_container_width=True, type=button_type):
+            st.session_state["active_step"] = step
 
+    st.progress((STEP_ORDER.index(st.session_state["active_step"]) + 1) / len(STEP_ORDER))
+    return st.session_state["active_step"]
 
 
 def _render_start() -> None:
@@ -274,20 +301,33 @@ def _render_start() -> None:
         st.info(f"Aktiver Use Case: {st.session_state['use_case_id']}")
 
 
+def _group_questions(questions: list[dict]) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for question in questions:
+        prefix = str(question["id"]).split("_", maxsplit=1)[0]
+        grouped.setdefault(prefix, []).append(question)
+    return grouped
+
 
 def _render_questionnaire() -> None:
     st.subheader("Fragebogen: beantworten, speichern und validieren")
     use_case_id = st.session_state["use_case_id"]
     if not use_case_id:
-        st.warning("Bitte zuerst im Start-Schritt einen Use Case anlegen.")
+        st.warning("Bitte zuerst im Schritt Start einen Use Case anlegen.")
         return
 
     questionnaire = questionnaire_service.get_questionnaire(st.session_state["version"])
+    question_payload = questionnaire.model_dump()["questions"]
+    grouped_questions = _group_questions(question_payload)
+
     with st.form("questionnaire_form"):
         answers: dict[str, object] = {}
-        for question in questionnaire.model_dump()["questions"]:
-            current = st.session_state["answers"].get(question["id"])
-            answers[question["id"]] = _render_question(question, current)
+        for group_id, questions in grouped_questions.items():
+            with st.expander(f"Themenblock {group_id}", expanded=True):
+                for question in questions:
+                    current = st.session_state["answers"].get(question["id"])
+                    answers[question["id"]] = _render_question(question, current)
+                    st.caption(f"Frage-ID: {question['id']}")
 
         save_clicked = st.form_submit_button("Antworten speichern")
         validate_clicked = st.form_submit_button("Validierung starten")
@@ -323,18 +363,17 @@ def _render_questionnaire() -> None:
         st.json(st.session_state["validation"])
 
 
-
 def _render_results() -> None:
-    st.subheader("Ergebnisse: BI/PA Assessment + Synthese")
+    st.subheader("Ergebnisse: BI/PA-Bewertung und Synthese")
     answer_set_id = st.session_state["answer_set_id"]
     if not answer_set_id:
         st.warning("Bitte zuerst Use Case und Antworten erfassen.")
         return
 
-    if st.button("Assessments & Synthese berechnen"):
+    if st.button("Bewertung und Synthese berechnen"):
         try:
             st.session_state["pipeline"] = _run_pipeline(answer_set_id, st.session_state["version"]).__dict__
-            st.success("Assessments und Synthese wurden berechnet und gespeichert.")
+            st.success("Bewertungen und Synthese wurden berechnet und gespeichert.")
         except ValueError as exc:
             st.error(str(exc))
 
@@ -350,14 +389,14 @@ def _render_results() -> None:
 
     bi_col, pa_col = st.columns(2)
     with bi_col:
-        st.markdown("### BI Assessment")
-        st.metric("Score", f"{pipeline['bi']['score']:.2f}")
+        st.markdown("### BI-Bewertung")
+        st.metric("Punktzahl", f"{pipeline['bi']['score']:.2f}")
         st.write(pipeline["bi"]["summary"])
         st.json(pipeline["bi"]["dimension_scores"])
 
     with pa_col:
-        st.markdown("### PA Assessment")
-        st.metric("Score", f"{pipeline['pa']['score']:.2f}")
+        st.markdown("### PA-Bewertung")
+        st.metric("Punktzahl", f"{pipeline['pa']['score']:.2f}")
         st.write(pipeline["pa"]["summary"])
         st.json(pipeline["pa"]["dimension_scores"])
 
@@ -365,7 +404,6 @@ def _render_results() -> None:
     st.write(pipeline["synthesis"]["combined_summary"])
     st.write(f"**Fokus:** {pipeline['synthesis']['priority_focus']}")
     st.write(f"**Empfehlung:** {pipeline['synthesis']['recommendation']}")
-
 
 
 def _load_latest_catalog_for_answer_set(answer_set_id: str) -> str | None:
@@ -410,7 +448,6 @@ def _load_synthesis(synthesis_id: str) -> Synthesis | None:
     )
 
 
-
 def _render_measures() -> None:
     st.subheader("Maßnahmen: Katalog, Auswahl, Priorisierung")
     answer_set_id = st.session_state["answer_set_id"]
@@ -419,11 +456,13 @@ def _render_measures() -> None:
         st.warning("Bitte zuerst Ergebnisse berechnen.")
         return
 
+    st.info("Standardmäßig wird eine lokale Ollama-Installation für Textverarbeitung genutzt (Fallback bei Nichterreichbarkeit).")
+
     if st.button("Maßnahmenkatalog generieren"):
         synthesis_payload = pipeline["synthesis"]
         synthesis_model = _load_synthesis(synthesis_payload["synthesis_id"])
         if synthesis_model is None:
-            st.error("Synthesis konnte nicht geladen werden. Bitte Ergebnisse neu berechnen.")
+            st.error("Synthese konnte nicht geladen werden. Bitte Ergebnisse neu berechnen.")
             return
 
         catalog = RecommendationService(llm_client=_build_llm_client()).generate_catalog(
@@ -432,7 +471,8 @@ def _render_measures() -> None:
             pa_maturity_label=pipeline["pa"]["level_label"],
             bi_dimension_scores=pipeline["bi"]["dimension_scores"],
             pa_dimension_scores=pipeline["pa"]["dimension_scores"],
-            use_llm_texts=st.session_state.get("use_llm_texts", False),
+            use_llm_texts=st.session_state.get("use_llm_texts", True),
+            answers=st.session_state.get("answers", {}),
         )
 
         with session_factory() as session:
@@ -460,12 +500,13 @@ def _render_measures() -> None:
         editor_data.append(
             {
                 "measure_id": measure.measure_id,
+                "initiative_id": measure.initiative_id,
                 "titel": measure.title,
                 "kategorie": measure.category.value,
                 "impact": measure.impact,
                 "effort": measure.effort,
-                "selected": True,
-                "final_priority": measure.suggested_priority,
+                "ausgewählt": True,
+                "endpriorität": measure.suggested_priority,
             }
         )
 
@@ -477,12 +518,12 @@ def _render_measures() -> None:
         editor_data,
         use_container_width=True,
         num_rows="fixed",
-        disabled=["measure_id", "titel", "kategorie", "impact", "effort"],
+        disabled=["measure_id", "initiative_id", "titel", "kategorie", "impact", "effort"],
         key="selection_editor",
     )
 
     if st.button("Finale Auswahl speichern"):
-        selections = [row for row in edited if row.get("selected")]
+        selections = [row for row in edited if row.get("ausgewählt")]
         with session_factory() as session:
             synthesis = session.scalar(
                 select(SynthesisEntity)
@@ -490,7 +531,7 @@ def _render_measures() -> None:
                 .limit(1)
             )
             if synthesis is None:
-                st.error("Synthesis für den Katalog nicht gefunden.")
+                st.error("Synthese für den Katalog nicht gefunden.")
                 return
 
             selection = UserSelection(
@@ -499,9 +540,9 @@ def _render_measures() -> None:
                 catalog_id=catalog.catalog_id,
                 selected_measure_ids=[row["measure_id"] for row in selections],
                 final_priority={
-                    row["measure_id"]: int(row["final_priority"])
+                    row["measure_id"]: int(row["endpriorität"])
                     for row in selections
-                    if row.get("final_priority") is not None
+                    if row.get("endpriorität") is not None
                 },
             )
             PersistenceRepository(session).save_user_selection(selection)
@@ -509,8 +550,7 @@ def _render_measures() -> None:
         st.success("Finale Auswahl gespeichert.")
 
 
-
-def _build_markdown_export() -> str:
+def _build_markdown_export(export_version: str) -> str:
     use_case_id = st.session_state["use_case_id"]
     answer_set_id = st.session_state["answer_set_id"]
     pipeline = st.session_state["pipeline"]
@@ -521,62 +561,61 @@ def _build_markdown_export() -> str:
         return "Noch keine vollständigen Daten für den Export vorhanden."
 
     with session_factory() as session:
-        use_case = session.get(UseCaseEntity, use_case_id)
         catalog = load_catalog(session, catalog_id) if catalog_id else None
 
-    lines = [
-        "# InsightHub Export",
-        f"- Use Case: {use_case.name if use_case else use_case_id}",
-        f"- Use Case Typ: {use_case.use_case_type.value if use_case else 'N/A'}",
-        f"- Answer Set: {answer_set_id}",
-        "",
-        "## Assessments",
-        f"- BI: {pipeline['bi']['summary']}",
-        f"- PA: {pipeline['pa']['summary']}",
-        "",
-        "## Synthese",
-        pipeline["synthesis"]["combined_summary"],
-        "",
-        "## Empfehlung",
-        pipeline["synthesis"]["recommendation"],
-        "",
-        "## Antworten",
-    ]
-
-    for question_id, value in answers.items():
-        lines.append(f"- {question_id}: {value}")
-
-    if catalog is not None:
-        lines.extend(["", "## Maßnahmenkatalog"])
-        for measure in catalog.measures:
-            lines.append(
-                f"- ({measure.suggested_priority}) {measure.title} | Kategorie: {measure.category.value} | "
-                f"Impact {measure.impact}/5 | Effort {measure.effort}/5"
-            )
-
-    return "\n".join(lines)
-
+    payload = build_export_payload(
+        pipeline=pipeline,
+        answers=answers,
+        catalog=catalog,
+        export_version=export_version,
+    )
+    return payload_to_markdown(payload)
 
 
 def _render_export() -> None:
     st.subheader("Export")
-    markdown_payload = _build_markdown_export()
+    export_version = st.selectbox(
+        "Export-Version",
+        options=["1.0.0", "1.1.0"],
+        index=1,
+        help="1.0.0 bleibt unverändert, 1.1.0 enthält Evidenz, Priorität, Abhängigkeiten und KPI.",
+    )
+
+    markdown_payload = _build_markdown_export(export_version)
+
+    use_case_id = st.session_state["use_case_id"]
+    answer_set_id = st.session_state["answer_set_id"]
+    pipeline = st.session_state["pipeline"]
+    catalog_id = st.session_state["catalog_id"]
+    answers = st.session_state["answers"]
+
+    with session_factory() as session:
+        catalog = load_catalog(session, catalog_id) if catalog_id else None
+
+    json_payload = (
+        payload_to_json(build_export_payload(pipeline=pipeline, answers=answers, catalog=catalog, export_version=export_version))
+        if (use_case_id and answer_set_id and pipeline)
+        else "{}"
+    )
 
     st.download_button(
         label="Markdown herunterladen",
         data=markdown_payload,
-        file_name="insighthub_export.md",
+        file_name=f"insighthub_export_v{export_version}.md",
         mime="text/markdown",
     )
+    st.download_button(
+        label="JSON herunterladen",
+        data=json_payload,
+        file_name=f"insighthub_export_v{export_version}.json",
+        mime="application/json",
+    )
 
-    st.info("PDF-Export ist optional und derzeit nicht aktiviert.")
-    st.text_area("Markdown Vorschau", markdown_payload, height=320)
-
+    st.text_area("Markdown-Vorschau", markdown_payload, height=320)
 
 
 def main() -> None:
     _init_state()
-    _render_llm_settings()
     step = _render_header()
 
     if step == "Start":

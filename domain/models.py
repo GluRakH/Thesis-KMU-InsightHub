@@ -131,6 +131,12 @@ class Measure(VersionedModel):
     prerequisites: list[str] = Field(default_factory=list)
     dependencies: list[str] = Field(default_factory=list)
     suggested_priority: int = Field(default=1, ge=1)
+    initiative_id: str = Field(default="")
+    goal: str = Field(default="")
+    evidence: dict[str, object] = Field(default_factory=dict)
+    priority: dict[str, float | str] = Field(default_factory=dict)
+    kpi: dict[str, str] = Field(default_factory=dict)
+    deliverables: list[str] = Field(default_factory=list)
 
 
 class MeasureCatalog(VersionedModel):

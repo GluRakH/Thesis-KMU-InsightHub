@@ -2,7 +2,7 @@ import unittest
 
 from adapters.llm_client import LLMClient
 from app.services.recommendation_service import RecommendationService
-from domain.models import Synthesis
+from domain.models import Measure, MeasureCategory, Synthesis
 
 
 class RecommendationServiceTestCase(unittest.TestCase):
@@ -29,12 +29,53 @@ class RecommendationServiceTestCase(unittest.TestCase):
             pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 30.0, "PA_D3": 55.0},
             bi_dimension_levels={"BI_D1": "L1", "BI_D2": "L2", "BI_D3": "L3"},
             pa_dimension_levels={"PA_D1": "L1", "PA_D2": "L2", "PA_D3": "L3"},
+            answers={"DA_01": 1, "DA_02": 2, "PA_01": 1},
         )
 
         self.assertEqual(catalog.synthesis_id, "syn-1")
         self.assertEqual(len(catalog.measures), 6)
-        self.assertEqual(catalog.measures[0].suggested_priority, 1)
         self.assertTrue(all(item.measure_class for item in catalog.measures))
+        self.assertTrue(all(item.initiative_id.startswith("INIT-") for item in catalog.measures))
+
+    def test_deficit_score_normalization(self) -> None:
+        self.assertEqual(self.service.calculate_deficit_score(1, 1, 5), 1.0)
+        self.assertEqual(self.service.calculate_deficit_score(5, 1, 5), 0.0)
+        self.assertEqual(self.service.calculate_deficit_score(None, 1, 5), 0.0)
+
+    def test_priority_score_effort_zero_is_protected(self) -> None:
+        score = self.service.calculate_priority_score(impact=4, effort=0, criticality_weight=1.3, gap_weight=1.15)
+        self.assertEqual(score, 5.98)
+
+    def test_dependency_bucketing_with_gate(self) -> None:
+        measures = [
+            Measure(
+                measure_id="m1",
+                initiative_id="INIT-BI-GOVERNANCE-01",
+                title="Governance",
+                description="",
+                category=MeasureCategory.GOVERNANCE,
+                dimension="BI_D1",
+                impact=5,
+                effort=2,
+                priority_score=3.0,
+            ),
+            Measure(
+                measure_id="m2",
+                initiative_id="INIT-BI-TECHNICAL-01",
+                title="Tech",
+                description="",
+                category=MeasureCategory.TECHNICAL,
+                dimension="BI_D2",
+                impact=5,
+                effort=2,
+                priority_score=4.0,
+                dependencies=["INIT-BI-GOVERNANCE-01"],
+            ),
+        ]
+
+        buckets = self.service._build_now_next_later(measures)
+        self.assertEqual(buckets["now"], ["INIT-BI-GOVERNANCE-01"])
+        self.assertEqual(buckets["next"], ["INIT-BI-TECHNICAL-01"])
 
 
 if __name__ == "__main__":

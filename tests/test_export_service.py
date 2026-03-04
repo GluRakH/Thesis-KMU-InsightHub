@@ -144,6 +144,42 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertIn("Severity: 0.72", markdown)
         self.assertIn("Deliverable: D1", markdown)
 
+    def test_export_v12_fills_missing_kpi_and_deliverables_from_template(self) -> None:
+        pipeline = {
+            "bi": {"critical_dimension_id": "BI_D1", "critical_dimension_severity": 0.7},
+            "pa": {"critical_dimension_id": "PA_D1", "critical_dimension_severity": 0.6},
+            "synthesis": {"combined_summary": "combo", "recommendation": "reco"},
+        }
+        catalog = MeasureCatalog(
+            catalog_id="cat-3",
+            title="Test",
+            status=CatalogStatus.DRAFT,
+            synthesis_id="syn-1",
+            measures=[
+                Measure(
+                    measure_id="mea-1",
+                    initiative_id="INIT-BI-GOVERNANCE-01",
+                    title="BI-Governance-Basics etablieren",
+                    description="Diagnose",
+                    category=MeasureCategory.GOVERNANCE,
+                    dimension="BI_D1",
+                    priority_score=0,
+                    kpi={},
+                    deliverables=[],
+                    priority={"bucket": "later"},
+                )
+            ],
+        )
+
+        payload = build_export_payload(pipeline=pipeline, answers={}, catalog=catalog, export_version="1.2.0")
+        markdown = payload_to_markdown(payload)
+
+        later = payload["recommendations"]["later"][0]
+        self.assertTrue(later["priority_score"] > 0)
+        self.assertEqual(later["kpi"]["name"], "Abgedeckte kritische Datenobjekte mit benanntem Owner")
+        self.assertEqual(len(later["deliverables"]), 3)
+        self.assertIn("KPI: Abgedeckte kritische Datenobjekte mit benanntem Owner", markdown)
+
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {
             "timestamp": datetime(2026, 1, 2, 3, 4, tzinfo=timezone.utc),

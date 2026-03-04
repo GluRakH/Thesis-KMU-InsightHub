@@ -4,6 +4,7 @@ import json
 from datetime import date, datetime, timezone
 from typing import Any
 
+from app.services.initiative_templates import template_for_dimension
 from domain.models import MeasureCatalog
 
 
@@ -112,6 +113,24 @@ def build_export_payload(
         for measure in sorted(catalog.measures, key=lambda m: (-float(m.priority_score), m.initiative_id)):
             priority = dict(measure.priority or {})
             score = float(measure.priority_score or priority.get("score", 0.0))
+            if score <= 0:
+                impact = float(priority.get("impact", measure.impact or 1))
+                effort = max(1.0, float(priority.get("effort", measure.effort or 1)))
+                criticality_weight = float(priority.get("criticality_weight", 1.0))
+                gap_weight = float(priority.get("gap_weight", 1.0))
+                score = (impact / effort) * criticality_weight * gap_weight
+
+            template = template_for_dimension(measure.dimension) if measure.dimension else None
+            deliverables = list(measure.deliverables or [])[:3]
+            if not deliverables and template:
+                deliverables = list(template.deliverables)
+
+            kpi = dict(measure.kpi or {})
+            if template:
+                kpi.setdefault("name", template.kpi_name)
+                kpi.setdefault("target", template.kpi_target_template)
+                kpi.setdefault("measurement", template.kpi_measurement)
+
             bucket = str(priority.get("bucket", "later")).lower()
             if bucket not in recommendations:
                 bucket = "later"
@@ -124,9 +143,9 @@ def build_export_payload(
                     "priority_score": round(score, 2),
                     "diagnosis": measure.description,
                     "goal": measure.goal,
-                    "deliverables": (measure.deliverables or [])[:3],
+                    "deliverables": deliverables,
                     "dependencies": measure.dependencies,
-                    "kpi": measure.kpi,
+                    "kpi": kpi,
                 }
             )
 

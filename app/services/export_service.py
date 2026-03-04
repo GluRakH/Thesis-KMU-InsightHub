@@ -85,6 +85,7 @@ def build_export_payload(
     answers: dict[str, Any],
     catalog: MeasureCatalog | None,
     export_version: str = "1.0.0",
+    catalog_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     timestamp = datetime.now(timezone.utc).isoformat()
     if export_version == "1.0.0":
@@ -160,7 +161,31 @@ def build_export_payload(
         "evidence_overview": evidence_overview,
         "recommendations": recommendations,
         "answers": answers,
+        "catalog_summary": catalog_summary if export_version == "1.2.0" else None,
     }
+
+
+def _append_catalog_summary_markdown(lines: list[str], payload: dict[str, Any]) -> None:
+    summary = payload.get("catalog_summary") or {}
+    if not summary:
+        return
+
+    lines.append("\n## Ergebnis Maßnahmenkatalog (LLM)")
+    lines.append(f"- Headline: {summary.get('headline', 'Ergebnis Maßnahmenkatalog')}")
+    lines.append(summary.get("executive_summary", ""))
+
+    for section_key, section_title in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
+        lines.append(f"### {section_title}")
+        for item in summary.get(section_key, []):
+            lines.append(f"- {item}")
+
+    lines.append("### Risiken & Abhängigkeiten")
+    for item in summary.get("risks_and_dependencies", []):
+        lines.append(f"- {item}")
+
+    lines.append("### Erste 30 Tage")
+    for item in summary.get("first_30_days", []):
+        lines.append(f"- {item}")
 
 
 def payload_to_markdown(payload: dict[str, Any]) -> str:
@@ -259,6 +284,8 @@ def payload_to_markdown(payload: dict[str, Any]) -> str:
             lines.append(f"  - Dependencies: {', '.join(measure.get('dependencies', [])) or 'keine'}")
             kpi = measure.get("kpi", {})
             lines.append(f"  - KPI: {kpi.get('name')} | Ziel: {kpi.get('target')} | Messung: {kpi.get('measurement')}")
+
+    _append_catalog_summary_markdown(lines, payload)
     return "\n".join(lines)
 
 

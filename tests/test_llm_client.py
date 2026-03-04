@@ -50,6 +50,17 @@ class LLMClientTestCase(unittest.TestCase):
             self.assertTrue(all(isinstance(item, str) for item in measures))
 
 
+    def test_summarize_measure_catalog_returns_structured_payload(self) -> None:
+        client = LLMClient(dry_run=True)
+
+        summary = client.summarize_measure_catalog(
+            focus="Governance",
+            measures_by_bucket={"now": [{"title": "M1"}], "next": [], "later": []},
+        )
+
+        self.assertEqual(summary["headline"], "Ergebnis Maßnahmenkatalog")
+        self.assertTrue(summary["now"])
+
     def test_check_connection_in_dry_run_mode(self) -> None:
         client = LLMClient(dry_run=True)
 

@@ -70,6 +70,7 @@ def _init_state() -> None:
         "export_version": "1.1.0",
         "active_step": "Start",
         "use_llm_texts": True,
+        "catalog_summary": None,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -548,6 +549,13 @@ def _render_measures() -> None:
 
     if st.button("Finale Auswahl speichern"):
         selections = [row for row in edited if row.get("ausgewählt")]
+        selected_ids = [row["measure_id"] for row in selections]
+        final_priority = {
+            row["measure_id"]: int(row["endpriorität"])
+            for row in selections
+            if row.get("endpriorität") is not None
+        }
+
         with session_factory() as session:
             synthesis = session.scalar(
                 select(SynthesisEntity)
@@ -562,17 +570,72 @@ def _render_measures() -> None:
                 user_selection_id=f"sel-{uuid4().hex[:12]}",
                 synthesis_id=synthesis.synthesis_id,
                 catalog_id=catalog.catalog_id,
-                selected_measure_ids=[row["measure_id"] for row in selections],
-                final_priority={
-                    row["measure_id"]: int(row["endpriorität"])
-                    for row in selections
-                    if row.get("endpriorität") is not None
-                },
+                selected_measure_ids=selected_ids,
+                final_priority=final_priority,
             )
             PersistenceRepository(session).save_user_selection(selection)
 
+        by_bucket = _build_catalog_summary_payload(catalog, selected_ids, final_priority)
+        summary = _build_llm_client().summarize_measure_catalog(
+            focus=str(pipeline["synthesis"].get("priority_focus", "")),
+            measures_by_bucket=by_bucket,
+        )
+        st.session_state["catalog_summary"] = summary
+
         st.success("Finale Auswahl gespeichert.")
 
+    if st.session_state.get("catalog_summary"):
+        _render_catalog_summary(st.session_state["catalog_summary"])
+
+
+def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], final_priority: dict[str, int]) -> dict[str, list[dict[str, object]]]:
+    selected = [measure for measure in catalog.measures if measure.measure_id in selected_ids]
+    selected.sort(key=lambda measure: final_priority.get(measure.measure_id, measure.suggested_priority))
+
+    by_bucket: dict[str, list[dict[str, object]]] = {"now": [], "next": [], "later": []}
+    for measure in selected:
+        bucket = str((measure.priority or {}).get("bucket", "later")).lower()
+        if bucket not in by_bucket:
+            bucket = "later"
+        by_bucket[bucket].append(
+            {
+                "initiative_id": measure.initiative_id,
+                "title": measure.title,
+                "dimension": measure.dimension,
+                "priority": final_priority.get(measure.measure_id, measure.suggested_priority),
+                "dependencies": measure.dependencies,
+                "deliverables": measure.deliverables[:3],
+            }
+        )
+    return by_bucket
+
+
+def _render_catalog_summary(summary: dict[str, object]) -> None:
+    st.markdown("### Ergebnis Maßnahmenkatalog (LLM)")
+    st.markdown(f"**{summary.get('headline', 'Ergebnis Maßnahmenkatalog')}**")
+    st.write(summary.get("executive_summary", ""))
+
+    col_now, col_next, col_later = st.columns(3)
+    for column, key, title in (
+        (col_now, "now", "Jetzt"),
+        (col_next, "next", "Als Nächstes"),
+        (col_later, "later", "Später"),
+    ):
+        with column:
+            st.markdown(f"**{title}**")
+            items = summary.get(key, [])
+            if not items:
+                st.caption("Keine Punkte")
+            for item in items:
+                st.markdown(f"- {item}")
+
+    st.markdown("**Risiken & Abhängigkeiten**")
+    for item in summary.get("risks_and_dependencies", []):
+        st.markdown(f"- {item}")
+
+    st.markdown("**Erste 30 Tage**")
+    for item in summary.get("first_30_days", []):
+        st.markdown(f"- {item}")
 
 def _build_markdown_export(export_version: str) -> str:
     use_case_id = st.session_state["use_case_id"]
@@ -592,6 +655,7 @@ def _build_markdown_export(export_version: str) -> str:
         answers=answers,
         catalog=catalog,
         export_version=export_version,
+        catalog_summary=st.session_state.get("catalog_summary"),
     )
     return payload_to_markdown(payload)
 
@@ -617,7 +681,15 @@ def _render_export() -> None:
         catalog = load_catalog(session, catalog_id) if catalog_id else None
 
     json_payload = (
-        payload_to_json(build_export_payload(pipeline=pipeline, answers=answers, catalog=catalog, export_version=export_version))
+        payload_to_json(
+            build_export_payload(
+                pipeline=pipeline,
+                answers=answers,
+                catalog=catalog,
+                export_version=export_version,
+                catalog_summary=st.session_state.get("catalog_summary"),
+            )
+        )
         if (use_case_id and answer_set_id and pipeline)
         else "{}"
     )

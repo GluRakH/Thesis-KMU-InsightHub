@@ -52,16 +52,28 @@ def build_export_payload(
     if catalog:
         sorted_measures = sorted(catalog.measures, key=lambda item: item.suggested_priority)
         for measure in sorted_measures:
+            priority = dict(measure.priority or {})
+            priority.setdefault("impact", float(measure.impact))
+            priority.setdefault("effort", float(measure.effort))
+            priority.setdefault("criticality_weight", 1.0)
+            priority.setdefault("gap_weight", 1.0)
+            priority.setdefault("score", measure.priority_score)
+
+            kpi = dict(measure.kpi or {})
+            kpi.setdefault("name", f"Fortschritt {measure.dimension or 'N/A'}")
+            kpi.setdefault("target", "n/a")
+            kpi.setdefault("measurement", "n/a")
+
             payload = {
-                "id": measure.initiative_id,
-                "title": measure.title,
-                "goal": measure.goal,
-                "priority": measure.priority,
+                "id": measure.initiative_id or measure.measure_id or "N/A",
+                "title": measure.title or "Ohne Titel",
+                "goal": measure.goal or "n/a",
+                "priority": priority,
                 "dependencies": measure.dependencies,
-                "kpi": measure.kpi,
+                "kpi": kpi,
                 "trigger_items": measure.evidence.get("trigger_items", []),
             }
-            bucket = str(measure.priority.get("bucket", "later")).lower()
+            bucket = str(priority.get("bucket", "later")).lower()
             if bucket not in recommendations:
                 bucket = "later"
             recommendations[bucket].append(payload)

@@ -468,6 +468,14 @@ def _render_measures() -> None:
 
     st.info("Standardmäßig wird eine lokale Ollama-Installation für Textverarbeitung genutzt (Fallback bei Nichterreichbarkeit).")
 
+    if st.button("LLM/Ollama-Verbindung prüfen"):
+        status = _build_llm_client().check_connection()
+        if status.get("ok"):
+            st.success(status.get("message", "LLM-Verbindung ist verfügbar."))
+        else:
+            st.error(status.get("message", "LLM-Verbindung ist nicht verfügbar."))
+        st.caption(f"URL: {status.get('api_url', 'n/a')} | Modell: {status.get('model', 'n/a')} | Modus: {status.get('mode', 'n/a')}")
+
     if st.button("Maßnahmenkatalog generieren"):
         synthesis_payload = pipeline["synthesis"]
         synthesis_model = _load_synthesis(synthesis_payload["synthesis_id"])

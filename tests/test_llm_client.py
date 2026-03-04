@@ -49,6 +49,28 @@ class LLMClientTestCase(unittest.TestCase):
             self.assertEqual(len(measures), 2)
             self.assertTrue(all(isinstance(item, str) for item in measures))
 
+
+    def test_check_connection_in_dry_run_mode(self) -> None:
+        client = LLMClient(dry_run=True)
+
+        status = client.check_connection()
+
+        self.assertTrue(status["ok"])
+        self.assertEqual(status["mode"], "dry_run")
+
+    @patch("urllib.request.urlopen")
+    def test_check_connection_reports_error(self, mocked_urlopen) -> None:
+        mocked_urlopen.side_effect = RuntimeError("offline")
+        client = LLMClient(
+            config=LLMClientConfig(trace_file=Path(tempfile.gettempdir()) / "trace.jsonl"),
+            dry_run=False,
+        )
+
+        status = client.check_connection()
+
+        self.assertFalse(status["ok"])
+        self.assertIn("fehlgeschlagen", status["message"])
+
     @patch("urllib.request.urlopen")
     def test_call_api_uses_ollama_generate(self, mocked_urlopen) -> None:
         captured_request = {}

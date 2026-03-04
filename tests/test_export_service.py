@@ -3,6 +3,7 @@ import unittest
 from datetime import date, datetime, timezone
 
 from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
+from domain.models import CatalogStatus, Measure, MeasureCatalog, MeasureCategory
 
 
 class ExportServiceTestCase(unittest.TestCase):
@@ -21,6 +22,38 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertEqual(payload["export_version"], "1.1.0")
         self.assertIn("Export Version: 1.1.0", markdown)
         self.assertIn('"export_version": "1.1.0"', raw_json)
+
+
+    def test_export_v11_fills_missing_measure_fields(self) -> None:
+        pipeline = {
+            "bi": {"summary": "BI", "dimension_scores": {"BI_D1": 30.0}},
+            "pa": {"summary": "PA", "dimension_scores": {"PA_D1": 35.0}},
+            "synthesis": {"combined_summary": "combo", "recommendation": "reco"},
+        }
+        catalog = MeasureCatalog(
+            catalog_id="cat-1",
+            title="Test",
+            status=CatalogStatus.DRAFT,
+            synthesis_id="syn-1",
+            measures=[
+                Measure(
+                    measure_id="mea-1",
+                    initiative_id="",
+                    title="",
+                    description="d",
+                    category=MeasureCategory.TECHNICAL,
+                    impact=3,
+                    effort=2,
+                    priority_score=1.5,
+                )
+            ],
+        )
+
+        payload = build_export_payload(pipeline=pipeline, answers={}, catalog=catalog, export_version="1.1.0")
+        markdown = payload_to_markdown(payload)
+
+        self.assertIn("Ohne Titel", markdown)
+        self.assertIn("PriorityScore=1.5", markdown)
 
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {

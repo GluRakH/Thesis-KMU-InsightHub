@@ -605,6 +605,7 @@ def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], fin
                 "priority": final_priority.get(measure.measure_id, measure.suggested_priority),
                 "dependencies": measure.dependencies,
                 "deliverables": measure.deliverables[:3],
+                "kpi": measure.kpi,
             }
         )
     return by_bucket
@@ -636,6 +637,21 @@ def _render_catalog_summary(summary: dict[str, object]) -> None:
     st.markdown("**Erste 30 Tage**")
     for item in summary.get("first_30_days", []):
         st.markdown(f"- {item}")
+
+    details_by_bucket = summary.get("measure_details", {}) if isinstance(summary, dict) else {}
+    if isinstance(details_by_bucket, dict):
+        st.markdown("**Maßnahmen-Details (Deliverables & KPI)**")
+        for bucket, bucket_title in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
+            entries = details_by_bucket.get(bucket, [])
+            if not entries:
+                continue
+            st.markdown(f"_{bucket_title}_")
+            for entry in entries:
+                title = str(entry.get("title") or "Maßnahme")
+                deliverables = str(entry.get("deliverables_summary") or "")
+                kpi_summary = str(entry.get("kpi_summary") or "")
+                if deliverables or kpi_summary:
+                    st.markdown(f"- **{title}**: {deliverables} {kpi_summary}".strip())
 
 def _build_markdown_export(export_version: str) -> str:
     use_case_id = st.session_state["use_case_id"]

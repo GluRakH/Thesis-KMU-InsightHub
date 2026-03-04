@@ -187,6 +187,22 @@ def _append_catalog_summary_markdown(lines: list[str], payload: dict[str, Any]) 
     for item in summary.get("first_30_days", []):
         lines.append(f"- {item}")
 
+    details = summary.get("measure_details", {})
+    if isinstance(details, dict) and any(details.get(bucket) for bucket in ("now", "next", "later")):
+        lines.append("### Maßnahmen-Details (Deliverables & KPI)")
+        for bucket, title in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
+            entries = details.get(bucket, [])
+            if not entries:
+                continue
+            lines.append(f"- {title}:")
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                measure_title = str(entry.get("title") or "Maßnahme")
+                deliverables = str(entry.get("deliverables_summary") or "")
+                kpi_summary = str(entry.get("kpi_summary") or "")
+                lines.append(f"  - {measure_title}: {(deliverables + ' ' + kpi_summary).strip()}")
+
 
 def payload_to_markdown(payload: dict[str, Any]) -> str:
     if payload.get("export_version") == "1.0.0":

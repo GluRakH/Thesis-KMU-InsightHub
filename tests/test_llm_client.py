@@ -60,6 +60,8 @@ class LLMClientTestCase(unittest.TestCase):
 
         self.assertEqual(summary["headline"], "Ergebnis Maßnahmenkatalog")
         self.assertTrue(summary["now"])
+        self.assertIn("measure_details", summary)
+        self.assertIn("now", summary["measure_details"])
 
     def test_check_connection_in_dry_run_mode(self) -> None:
         client = LLMClient(dry_run=True)

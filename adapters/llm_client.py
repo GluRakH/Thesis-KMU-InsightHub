@@ -123,8 +123,13 @@ class LLMClient:
         }
         prompt = (
             "Fasse den Maßnahmenkatalog auf Deutsch, übersichtlich und verständlich zusammen. "
+            "Die Punkte in now/next/later sollen kurz, aber mit konkretem Nutzen formuliert sein. "
+            "Ergänze zusätzlich pro Bucket eine knappe Anreicherung zu Deliverables und KPI. "
             "Gib nur JSON zurück mit den Feldern "
-            "'headline', 'executive_summary', 'now', 'next', 'later', 'risks_and_dependencies', 'first_30_days'."
+            "'headline', 'executive_summary', 'now', 'next', 'later', 'risks_and_dependencies', 'first_30_days', "
+            "'measure_details'. "
+            "'measure_details' muss ein Objekt mit den Buckets now/next/later sein; "
+            "jede Liste enthält Objekte mit 'title', 'deliverables_summary', 'kpi_summary'."
         )
         content = self._run_text_task("summarize_measure_catalog", prompt, payload, output_key="catalog_summary")
 
@@ -144,7 +149,40 @@ class LLMClient:
             "later": [str(item) for item in parsed.get("later", [])][:3],
             "risks_and_dependencies": [str(item) for item in parsed.get("risks_and_dependencies", [])][:4],
             "first_30_days": [str(item) for item in parsed.get("first_30_days", [])][:4],
+            "measure_details": self._normalize_measure_details(parsed.get("measure_details")),
         }
+
+    @staticmethod
+    def _normalize_measure_details(raw: Any) -> dict[str, list[dict[str, str]]]:
+        default = {"now": [], "next": [], "later": []}
+        if not isinstance(raw, dict):
+            return default
+
+        normalized: dict[str, list[dict[str, str]]] = {}
+        for bucket in ("now", "next", "later"):
+            entries = raw.get(bucket, [])
+            if not isinstance(entries, list):
+                normalized[bucket] = []
+                continue
+
+            bucket_items: list[dict[str, str]] = []
+            for item in entries[:3]:
+                if not isinstance(item, dict):
+                    continue
+                title = str(item.get("title") or "").strip()
+                deliverables_summary = str(item.get("deliverables_summary") or "").strip()
+                kpi_summary = str(item.get("kpi_summary") or "").strip()
+                if title or deliverables_summary or kpi_summary:
+                    bucket_items.append(
+                        {
+                            "title": title,
+                            "deliverables_summary": deliverables_summary,
+                            "kpi_summary": kpi_summary,
+                        }
+                    )
+            normalized[bucket] = bucket_items
+
+        return normalized
 
     def check_connection(self) -> dict[str, Any]:
         if self.dry_run:
@@ -330,6 +368,23 @@ class LLMClient:
                         "Sponsor und Kernteam benennen.",
                         "Top-3-Maßnahmen in konkrete Arbeitspakete mit Verantwortlichen überführen.",
                     ],
+                    "measure_details": {
+                        "now": [
+                            {
+                                "title": "Governance-Grundlagen und Rollen verbindlich festlegen.",
+                                "deliverables_summary": "Lieferobjekte: Rollenmodell, RACI und Governance-Board-Rhythmus.",
+                                "kpi_summary": "KPI: Owner-Abdeckung >= 90% und Review-Teilnahmequote.",
+                            }
+                        ],
+                        "next": [
+                            {
+                                "title": "Skalierbare Analytics-/Automations-Standards ausrollen.",
+                                "deliverables_summary": "Lieferobjekte: Standard-Templates und verbindliche Qualitäts-Checks.",
+                                "kpi_summary": "KPI: Anteil standardisierter Use Cases und reduzierte Durchlaufzeit.",
+                            }
+                        ],
+                        "later": [],
+                    },
                 },
                 ensure_ascii=False,
             )

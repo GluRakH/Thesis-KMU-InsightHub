@@ -1,8 +1,8 @@
-# Thesis-KMU-InsightHub
+﻿# Thesis-KMU-InsightHub
 
 Stabile Demo für BI/PA-Assessment inkl. Validierung, Scoring, Synthesis und Maßnahmenkatalog.
 
-## Setup
+## Setup (Windows + PowerShell)
 
 ### 1) Notwendige Software installieren
 
@@ -17,36 +17,25 @@ Stabile Demo für BI/PA-Assessment inkl. Validierung, Scoring, Synthesis und Ma�
 - **Ollama** (lokaler Modellserver)
 - mindestens ein Modell, z. B. `llama3.1:8b`
 
-Beispiel-Kommandos:
+Hinweis: Die Installation erfolgt unter Windows typischerweise über Installer (MSI/EXE) oder `winget`.
 
-```bash
-# Ubuntu / Debian
-sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
+Beispiel mit `winget`:
 
-# macOS (mit Homebrew)
-brew install git python
-
-# Optional: Ollama installieren (siehe offizielle Doku)
-# https://ollama.com/download
+```powershell
+winget install --id Git.Git -e
+winget install --id Python.Python.3.12 -e
+# Optional: Ollama
+winget install --id Ollama.Ollama -e
 ```
 
 ### 2) Repository klonen und in den Projektordner wechseln
 
-```bash
+```powershell
 git clone <DEIN_REPO_URL>
-cd Thesis-KMU-InsightHub
+Set-Location Thesis-KMU-InsightHub
 ```
 
 ### 3) Virtuelle Umgebung anlegen und aktivieren
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Windows (PowerShell):
 
 ```powershell
 python -m venv .venv
@@ -58,25 +47,25 @@ pip install -r requirements.txt
 
 Optional für reproduzierbare LLM-Läufe ohne API-Key:
 
-```bash
-export LLM_DRY_RUN=true
-export LLM_TRACE_FILE=logs/llm_traces.jsonl
+```powershell
+$env:LLM_DRY_RUN = "true"
+$env:LLM_TRACE_FILE = "logs/llm_traces.jsonl"
 ```
 
 Optional für Live-Zugriff auf eine lokale Ollama-Installation:
 
-```bash
-export LLM_MODEL=llama3.1:8b
-export LLM_API_URL=http://localhost:11434/api/generate
+```powershell
+$env:LLM_MODEL = "llama3.1:8b"
+$env:LLM_API_URL = "http://localhost:11434/api/generate"
 # optional, falls deine Ollama-Instanz abgesichert ist
-export OLLAMA_API_KEY=...
+$env:OLLAMA_API_KEY = "..."
 ```
 
 > Ohne laufendes Ollama läuft die Demo weiterhin stabil mit Dummy/Fallback-Ausgaben.
 
 ### 5) API lokal starten (Hosting lokal auf deinem Rechner)
 
-```bash
+```powershell
 uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -85,9 +74,10 @@ uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 6) Streamlit-UI starten
 
-Öffne ein **zweites Terminal**, aktiviere dort ebenfalls die virtuelle Umgebung und starte:
+Öffne ein **zweites PowerShell-Terminal**, aktiviere dort ebenfalls die virtuelle Umgebung und starte:
 
-```bash
+```powershell
+.\.venv\Scripts\Activate.ps1
 streamlit run app/ui/streamlit_app.py --server.port 8501
 ```
 
@@ -103,27 +93,33 @@ Wenn API und UI laufen, kannst du prüfen:
 
 ### 8) Tests lokal ausführen (empfohlen)
 
-```bash
+```powershell
 python -m unittest discover -s tests
 ```
 
 ### 9) Häufige Fehler & schnelle Lösungen
 
 - **`ModuleNotFoundError`**: Prüfe, ob die virtuelle Umgebung aktiv ist.
+- **Execution Policy blockiert `Activate.ps1`**: Starte einmalig in aktueller Session:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
 - **Port bereits belegt (`8000` oder `8501`)**: Starte mit anderem Port, z. B. `--port 8001`.
-- **LLM/Ollama nicht erreichbar**: Setze `LLM_DRY_RUN=true`, dann läuft die App mit Fallback-Ausgaben.
+- **LLM/Ollama nicht erreichbar**: Setze `$env:LLM_DRY_RUN = "true"`, dann läuft die App mit Fallback-Ausgaben.
 
 ## Run
 
 ### API (FastAPI)
 
-```bash
+```powershell
 uvicorn app.api.main:app --reload
 ```
 
 ### UI (Streamlit)
 
-```bash
+```powershell
 streamlit run app/ui/streamlit_app.py
 ```
 
@@ -149,7 +145,6 @@ Folgende Versionsfelder werden persistiert:
 
 Zusätzlich werden LLM-Trace-Events in `logs/llm_traces.jsonl` protokolliert (Task, Prompt-Version, Modell, Hash, Modus).
 
-
 ## LLM-Integration (lokales Ollama)
 
 - Die LLM-Aufrufe nutzen die Ollama API (**`/api/generate`**).
@@ -160,7 +155,7 @@ Zusätzlich werden LLM-Trace-Events in `logs/llm_traces.jsonl` protokolliert (Ta
 
 ## Qualität / Tests
 
-```bash
+```powershell
 python -m unittest discover -s tests
 ```
 

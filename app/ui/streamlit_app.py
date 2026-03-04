@@ -238,6 +238,9 @@ def _load_latest_pipeline(answer_set_id: str) -> PipelineResult | None:
             "maturity_level": bi.details.get("maturity_level", 0),
             "dimension_scores": bi.details.get("dimension_scores", {}),
             "findings": bi.details.get("findings", {}),
+            "critical_dimension_id": bi.details.get("critical_dimension_id", ""),
+            "critical_dimension_severity": bi.details.get("critical_dimension_severity", 0.0),
+            "critical_dimension_top_items": bi.details.get("critical_dimension_top_items", []),
         },
         pa={
             "pa_assessment_id": pa.pa_assessment_id,
@@ -247,6 +250,9 @@ def _load_latest_pipeline(answer_set_id: str) -> PipelineResult | None:
             "maturity_level": pa.details.get("maturity_level", 0),
             "dimension_scores": pa.details.get("dimension_scores", {}),
             "findings": pa.details.get("findings", {}),
+            "critical_dimension_id": pa.details.get("critical_dimension_id", ""),
+            "critical_dimension_severity": pa.details.get("critical_dimension_severity", 0.0),
+            "critical_dimension_top_items": pa.details.get("critical_dimension_top_items", []),
         },
         synthesis={
             "synthesis_id": synthesis.synthesis_id,
@@ -594,9 +600,9 @@ def _render_export() -> None:
     st.subheader("Export")
     export_version = st.selectbox(
         "Export-Version",
-        options=["1.0.0", "1.1.0"],
+        options=["1.0.0", "1.1.0", "1.2.0"],
         index=1,
-        help="1.0.0 bleibt unverändert, 1.1.0 enthält Evidenz, Priorität, Abhängigkeiten und KPI.",
+        help="1.0.0 bleibt unverändert, 1.1.0 bleibt verfügbar, 1.2.0 enthält Trigger-Evidenz, konkrete Deliverables und deterministische Buckets.",
     )
 
     markdown_payload = _build_markdown_export(export_version)

@@ -214,3 +214,21 @@ In der Streamlit-Ansicht **Export** kann die Version über das Dropdown **Export
 
 - `1.0.0` für den Legacy-Export
 - `1.1.0` für den erweiterten wissenschaftlich nachvollziehbaren Export
+
+
+## Export-Versionierung 1.2.0 (konkrete Maßnahmen & deterministische Sequenzierung)
+
+Zusätzlich zu 1.0.0/1.1.0 ist jetzt **Export 1.2.0** verfügbar.
+
+- Evidenzüberblick je Domäne enthält `critical_dimension_id`, `critical_dimension_severity` und Top-Trigger-Items.
+- Maßnahmen werden aus einer deterministischen Template-Registry erzeugt (kein reines „Optimieren: …“).
+- Jede Maßnahme enthält Diagnose, exakt 3 Deliverables, KPI und explizite Dependencies.
+- PriorityScore wird differenziert aus Impact/Effort, Criticality-Rang und Gap-Weight gebildet.
+- NOW/NEXT/LATER wird aus Priorität + Abhängigkeiten gebildet (NOW max. 2 je Domäne, max. 4 gesamt).
+
+### Auswahl der Export-Version
+
+Im Export-Dropdown stehen jetzt zur Verfügung:
+- `1.0.0` (Legacy)
+- `1.1.0` (bestehender erweiterter Export)
+- `1.2.0` (neue konkrete Maßnahmenlogik)

@@ -34,17 +34,28 @@ class RecommendationServiceTestCase(unittest.TestCase):
 
         self.assertEqual(catalog.synthesis_id, "syn-1")
         self.assertEqual(len(catalog.measures), 6)
-        self.assertTrue(all(item.measure_class for item in catalog.measures))
+        self.assertTrue(all(len(item.deliverables) == 3 for item in catalog.measures))
         self.assertTrue(all(item.initiative_id.startswith("INIT-") for item in catalog.measures))
 
     def test_deficit_score_normalization(self) -> None:
         self.assertEqual(self.service.calculate_deficit_score(1, 1, 5), 1.0)
         self.assertEqual(self.service.calculate_deficit_score(5, 1, 5), 0.0)
-        self.assertEqual(self.service.calculate_deficit_score(None, 1, 5), 0.0)
+        self.assertIsNone(self.service.calculate_deficit_score(None, 1, 5))
+
+    def test_criticality_weight_rankings(self) -> None:
+        weights = self.service._criticality_weights({"BI_D1": 20, "BI_D2": 30, "BI_D3": 40})
+        self.assertEqual(weights["BI_D1"], 1.3)
+        self.assertEqual(weights["BI_D2"], 1.15)
+        self.assertEqual(weights["BI_D3"], 1.0)
+
+    def test_gap_weight_default_and_clamp(self) -> None:
+        self.assertEqual(self.service._gap_weight("L1", "BI", {}), 1.3)
+        self.assertEqual(self.service._gap_weight("L1", "BI", {"BI": 10}), 1.6)
+        self.assertEqual(self.service._gap_weight("L4", "BI", {"BI": 2}), 1.0)
 
     def test_priority_score_effort_zero_is_protected(self) -> None:
         score = self.service.calculate_priority_score(impact=4, effort=0, criticality_weight=1.3, gap_weight=1.15)
-        self.assertEqual(score, 5.98)
+        self.assertAlmostEqual(score, 5.98)
 
     def test_dependency_bucketing_with_gate(self) -> None:
         measures = [

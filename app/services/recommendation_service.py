@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from adapters.llm_client import LLMClient
-from app.services.initiative_templates import DimensionTemplateBundle, InitiativeSchema, load_initiative_schema
+from app.services.initiative_templates import template_for_dimension
 from domain.models import CatalogStatus, Measure, MeasureCatalog, MeasureCategory, Synthesis
 
 
@@ -21,7 +21,6 @@ class RecommendationService:
         self._config_path = config_path or Path("app/config/recommendation_catalog_v1.0.json")
         self._scoring_dir = scoring_dir or Path("app/config")
         self._question_meta = self._load_question_meta()
-        self._initiative_schema: InitiativeSchema = load_initiative_schema()
 
     def generate_catalog(
         self,
@@ -36,7 +35,7 @@ class RecommendationService:
         answers: dict[str, Any] | None = None,
         target_level_by_domain: dict[str, int] | None = None,
     ) -> MeasureCatalog:
-        del use_llm_texts
+        del use_llm_texts  # 1.2.0 bleibt deterministisch ohne LLM-Texte.
         answers_payload = answers or {}
         scores = {**bi_dimension_scores, **pa_dimension_scores}
         levels = {**(bi_dimension_levels or {}), **(pa_dimension_levels or {})}
@@ -52,18 +51,13 @@ class RecommendationService:
         ranked_dimensions = sorted(scores.items(), key=lambda item: item[1])
         measures: list[Measure] = []
         sequence_by_domain: dict[str, int] = {"BI": 0, "PA": 0, "GLOBAL": 0}
-        template_to_initiative: dict[str, str] = {}
 
         for dimension, _ in ranked_dimensions:
-            bundle = self._initiative_schema.dimensions.get(dimension)
-            if bundle is None:
-                continue
-            template = bundle.template
+            template = template_for_dimension(dimension)
             level = levels.get(dimension, "L1")
             domain = self._domain_from_dimension(dimension)
             sequence_by_domain[domain] = sequence_by_domain.get(domain, 0) + 1
             initiative_id = self._build_initiative_id(domain, template.category, sequence_by_domain[domain])
-            template_to_initiative[template.template_id] = initiative_id
 
             impact = max(1, int(template.impact))
             effort = max(1, int(template.effort))
@@ -71,8 +65,9 @@ class RecommendationService:
             gap_weight = self._gap_weight(level, domain, target_level_by_domain or {})
             priority_score = self.calculate_priority_score(impact, effort, criticality_weight, gap_weight)
 
-            triggers = self._select_triggers(bundle, evidence_by_dimension.get(dimension, []))
-            diagnosis = self._build_diagnosis(bundle, dimension, triggers)
+            triggers = evidence_by_dimension.get(dimension, [])[:3]
+            diagnosis = self._build_diagnosis(template.diagnosis_template, dimension, triggers)
+            kpi_target = template.kpi_target_template.format(target_level=self._target_score(level, domain, target_level_by_domain or {}))
 
             measures.append(
                 Measure(
@@ -95,7 +90,6 @@ class RecommendationService:
                         "deficit_statement": self._build_deficit_statement(dimension, scores.get(dimension, 0.0)),
                         "trigger_items": triggers,
                         "severity": severity_by_dimension.get(dimension, 0.0),
-                        "dimension_name": bundle.dimension_name,
                     },
                     priority={
                         "impact": float(impact),
@@ -104,12 +98,11 @@ class RecommendationService:
                         "gap_weight": gap_weight,
                         "score": priority_score,
                     },
-                    kpi=template.kpi,
+                    kpi={"name": template.kpi_name, "target": kpi_target, "measurement": template.kpi_measurement},
                     deliverables=list(template.deliverables),
                 )
             )
 
-        self._apply_template_sequencing_dependencies(measures, template_to_initiative)
         self._apply_governance_gate(measures, severity_by_dimension)
         self._apply_data_quality_gate(measures, severity_by_dimension)
         buckets = self._build_now_next_later(measures)
@@ -160,10 +153,7 @@ class RecommendationService:
                 for question_id in dimension_meta.get("questions", []):
                     if question_id not in answers:
                         continue
-                    min_v, max_v = self._question_meta.get(
-                        question_id,
-                        (self._initiative_schema.defaults.scale_min, self._initiative_schema.defaults.scale_max),
-                    )
+                    min_v, max_v = self._question_meta.get(question_id, (1.0, 5.0))
                     deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v)
                     if deficit is None:
                         continue
@@ -172,7 +162,10 @@ class RecommendationService:
                 items.sort(key=lambda x: x["deficit_score"], reverse=True)
                 top_items = items[:3]
                 evidence[dimension_id] = top_items
-                severity_by_dimension[dimension_id] = round(sum(x["deficit_score"] for x in top_items) / len(top_items), 4) if top_items else 0.0
+                if top_items:
+                    severity_by_dimension[dimension_id] = round(sum(x["deficit_score"] for x in top_items) / len(top_items), 4)
+                else:
+                    severity_by_dimension[dimension_id] = 0.0
         return evidence, severity_by_dimension
 
     @staticmethod
@@ -202,6 +195,12 @@ class RecommendationService:
         return round(max(1.0, min(1.6, 1.0 + gap * 0.15)), 2)
 
     @staticmethod
+    def _target_score(level_label: str, domain: str, target_level_by_domain: dict[str, int]) -> str:
+        defaults = {"BI": 3, "PA": 3}
+        target = target_level_by_domain.get(domain, defaults.get(domain))
+        return f"L{target} (ausgehend von {level_label})" if target else ">= aktueller Baseline"
+
+    @staticmethod
     def _build_initiative_id(domain: str, category: MeasureCategory, sequence: int) -> str:
         return f"INIT-{domain}-{category.value.upper()}-{sequence:02d}"
 
@@ -225,31 +224,26 @@ class RecommendationService:
         return evidence[:3]
 
     @staticmethod
-    def _build_diagnosis(bundle: DimensionTemplateBundle, dimension: str, triggers: list[dict[str, Any]]) -> str:
-        trigger_text = ", ".join(f"{item['item_id']}={item['answer']} ({item['deficit_score']:.2f})" for item in triggers[:3])
-        if not trigger_text:
-            trigger_text = "keine hinreichenden Trigger-Items"
-        return f"{bundle.dimension_name}: {trigger_text}. Zielbild: {bundle.good_definition}"
+    def _domain_from_dimension(dimension: str) -> str:
+        if dimension.startswith("BI_"):
+            return "BI"
+        if dimension.startswith("PA_"):
+            return "PA"
+        return "GLOBAL"
 
     @staticmethod
-    def _build_deficit_statement(dimension: str, score: float) -> str:
-        return f"Dimension {dimension} liegt mit {score:.2f} unter dem Zielkorridor und erzeugt Umsetzungsdefizite."
+    def _build_diagnosis(template: str, dimension: str, triggers: list[dict[str, Any]]) -> str:
+        if triggers:
+            trigger_summary = ", ".join(
+                f"{item['item_id']}={item['answer']} (deficit {item['deficit_score']:.2f})" for item in triggers[:3]
+            )
+        else:
+            trigger_summary = "keine verwertbaren Trigger-Items"
+        return template.format(dimension=dimension, trigger_summary=trigger_summary)
 
-    def _apply_template_sequencing_dependencies(self, measures: list[Measure], template_to_initiative: dict[str, str]) -> None:
-        bundle_by_template = {
-            bundle.template.template_id: bundle
-            for bundle in self._initiative_schema.dimensions.values()
-        }
-        for measure in measures:
-            bundle = bundle_by_template.get(measure.measure_class)
-            if bundle is None:
-                continue
-            sequencing = bundle.template.sequencing or {}
-            hard_deps = [str(item) for item in sequencing.get("hard_dependencies", [])]
-            for dep_template_id in hard_deps:
-                dep_initiative_id = template_to_initiative.get(dep_template_id)
-                if dep_initiative_id and dep_initiative_id not in measure.dependencies:
-                    measure.dependencies.append(dep_initiative_id)
+    @staticmethod
+    def _governance_basics_missing(severity_by_dimension: dict[str, float], domain: str) -> bool:
+        return severity_by_dimension.get(f"{domain}_D1", 0.0) > 0.6
 
     def _apply_governance_gate(self, measures: list[Measure], severity_by_dimension: dict[str, float]) -> None:
         governance_by_domain = {
@@ -260,7 +254,7 @@ class RecommendationService:
             domain = self._domain_from_dimension(measure.dimension)
             if domain not in ("BI", "PA") or measure.category == MeasureCategory.GOVERNANCE:
                 continue
-            if severity_by_dimension.get(f"{domain}_D1", 0.0) <= 0.6:
+            if not self._governance_basics_missing(severity_by_dimension, domain):
                 continue
             governors = governance_by_domain.get(domain, [])
             if governors:
@@ -270,14 +264,17 @@ class RecommendationService:
 
     @staticmethod
     def _apply_data_quality_gate(measures: list[Measure], severity_by_dimension: dict[str, float]) -> None:
-        dq_candidates = [m for m in measures if m.measure_class == "BI_DATA_QUALITY_MONITORING"]
+        dq_candidates = [m for m in measures if m.dimension == "BI_D2" and m.category == MeasureCategory.DATA]
         if not dq_candidates or severity_by_dimension.get("BI_D2", 0.0) <= 0.55:
             return
         dq_id = dq_candidates[0].initiative_id
         for measure in measures:
             if measure.initiative_id == dq_id:
                 continue
-            advanced = measure.dimension in {"BI_D3", "PA_D3"} or (measure.category == MeasureCategory.TECHNICAL and measure.dimension in {"BI_D2", "PA_D2"})
+            advanced = (
+                measure.dimension in {"BI_D3", "PA_D3"}
+                or (measure.category == MeasureCategory.TECHNICAL and measure.dimension in {"BI_D2", "PA_D2"})
+            )
             if advanced and dq_id not in measure.dependencies:
                 measure.dependencies.append(dq_id)
 
@@ -290,7 +287,8 @@ class RecommendationService:
         for measure in ordered:
             domain = RecommendationService._domain_from_dimension(measure.dimension)
             deps = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
-            if len(buckets["now"]) < 4 and domain_now_count.get(domain, 0) < 2 and all(dep in buckets["now"] for dep in deps):
+            deps_in_now = all(dep in buckets["now"] for dep in deps)
+            if len(buckets["now"]) < 4 and domain_now_count.get(domain, 0) < 2 and deps_in_now:
                 buckets["now"].append(measure.initiative_id)
                 domain_now_count[domain] = domain_now_count.get(domain, 0) + 1
 

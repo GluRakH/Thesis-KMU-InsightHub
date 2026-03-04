@@ -112,6 +112,38 @@ class LLMClient:
 
         return [line.strip("- •\t ") for line in content.splitlines() if line.strip()][:max_measures]
 
+    def check_connection(self) -> dict[str, Any]:
+        if self.dry_run:
+            return {
+                "ok": True,
+                "mode": "dry_run",
+                "api_url": self.config.api_url,
+                "model": self.config.model,
+                "message": "LLMClient läuft im Dry-Run-Modus; keine echte Ollama-Verbindung getestet.",
+            }
+
+        try:
+            _ = self._call_api(
+                prompt="Antworte mit einem kurzen Verbindungsstatus.",
+                payload={"ping": "ping"},
+                output_key="status",
+            )
+            return {
+                "ok": True,
+                "mode": "api",
+                "api_url": self.config.api_url,
+                "model": self.config.model,
+                "message": "Ollama-Verbindung erfolgreich.",
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "mode": "api",
+                "api_url": self.config.api_url,
+                "model": self.config.model,
+                "message": f"Ollama-Verbindung fehlgeschlagen: {type(exc).__name__}: {exc}",
+            }
+
     def _run_text_task(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()

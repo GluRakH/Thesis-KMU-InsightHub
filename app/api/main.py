@@ -68,9 +68,19 @@ class FinalizeRecommendationsRequest(BaseModel):
     selections: list[FinalizeMeasureSelection] = Field(default_factory=list)
 
 
+class LLMConnectionCheckRequest(BaseModel):
+    ollama_api_key: str | None = Field(default=None, description="Optionaler Ollama API Key")
+
+
 @app.get("/")
 def read_root() -> dict[str, str]:
     return {"message": "Hello World"}
+
+
+@app.post("/llm/check")
+def llm_check(request: LLMConnectionCheckRequest) -> dict[str, Any]:
+    llm_client = LLMClient(api_key=request.ollama_api_key, dry_run=False) if request.ollama_api_key else LLMClient()
+    return llm_client.check_connection()
 
 
 @app.post("/usecases")

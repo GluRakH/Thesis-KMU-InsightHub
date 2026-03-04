@@ -195,6 +195,17 @@ class ExportServiceTestCase(unittest.TestCase):
             "later": ["Skalierung"],
             "risks_and_dependencies": ["Datenqualität als Voraussetzung"],
             "first_30_days": ["Kernteam benennen"],
+            "measure_details": {
+                "now": [
+                    {
+                        "title": "Governance aufsetzen",
+                        "deliverables_summary": "RACI und Rollenhandbuch",
+                        "kpi_summary": "Owner-Abdeckung >= 90%",
+                    }
+                ],
+                "next": [],
+                "later": [],
+            },
         }
 
         payload = build_export_payload(pipeline=pipeline, answers={}, catalog=None, export_version="1.2.0", catalog_summary=summary)
@@ -203,6 +214,8 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertEqual(payload["catalog_summary"]["headline"], "Ergebnis Maßnahmenkatalog")
         self.assertIn("## Ergebnis Maßnahmenkatalog (LLM)", markdown)
         self.assertIn("Kernteam benennen", markdown)
+        self.assertIn("Maßnahmen-Details (Deliverables & KPI)", markdown)
+        self.assertIn("Owner-Abdeckung >= 90%", markdown)
 
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {

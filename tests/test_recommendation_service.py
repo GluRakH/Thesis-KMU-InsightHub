@@ -34,17 +34,28 @@ class RecommendationServiceTestCase(unittest.TestCase):
 
         self.assertEqual(catalog.synthesis_id, "syn-1")
         self.assertEqual(len(catalog.measures), 6)
-        self.assertTrue(all(item.measure_class for item in catalog.measures))
+        self.assertTrue(all(len(item.deliverables) == 3 for item in catalog.measures))
         self.assertTrue(all(item.initiative_id.startswith("INIT-") for item in catalog.measures))
 
     def test_deficit_score_normalization(self) -> None:
         self.assertEqual(self.service.calculate_deficit_score(1, 1, 5), 1.0)
         self.assertEqual(self.service.calculate_deficit_score(5, 1, 5), 0.0)
-        self.assertEqual(self.service.calculate_deficit_score(None, 1, 5), 0.0)
+        self.assertIsNone(self.service.calculate_deficit_score(None, 1, 5))
+
+    def test_criticality_weight_rankings(self) -> None:
+        weights = self.service._criticality_weights({"BI_D1": 20, "BI_D2": 30, "BI_D3": 40})
+        self.assertEqual(weights["BI_D1"], 1.3)
+        self.assertEqual(weights["BI_D2"], 1.15)
+        self.assertEqual(weights["BI_D3"], 1.0)
+
+    def test_gap_weight_default_and_clamp(self) -> None:
+        self.assertEqual(self.service._gap_weight("L1", "BI", {}), 1.3)
+        self.assertEqual(self.service._gap_weight("L1", "BI", {"BI": 10}), 1.6)
+        self.assertEqual(self.service._gap_weight("L4", "BI", {"BI": 2}), 1.0)
 
     def test_priority_score_effort_zero_is_protected(self) -> None:
         score = self.service.calculate_priority_score(impact=4, effort=0, criticality_weight=1.3, gap_weight=1.15)
-        self.assertEqual(score, 5.98)
+        self.assertAlmostEqual(score, 5.98)
 
     def test_dependency_bucketing_with_gate(self) -> None:
         measures = [
@@ -76,6 +87,29 @@ class RecommendationServiceTestCase(unittest.TestCase):
         buckets = self.service._build_now_next_later(measures)
         self.assertEqual(buckets["now"], ["INIT-BI-GOVERNANCE-01"])
         self.assertEqual(buckets["next"], ["INIT-BI-TECHNICAL-01"])
+
+    def test_template_hard_dependencies_are_mapped_to_initiative_ids(self) -> None:
+        synthesis = Synthesis(
+            synthesis_id="syn-2",
+            answer_set_id="as-2",
+            bi_assessment_id="bi-2",
+            pa_assessment_id="pa-2",
+            recommendation="Reco",
+        )
+        catalog = self.service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label="L1",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 30.0, "BI_D3": 40.0},
+            pa_dimension_scores={"PA_D1": 50.0, "PA_D2": 60.0, "PA_D3": 70.0},
+            answers={"DA_01": 1, "DA_06": 1},
+        )
+        by_class = {m.measure_class: m for m in catalog.measures}
+        self.assertIn("BI_GOV_FOUNDATION", by_class)
+        self.assertIn("BI_DATA_QUALITY_MONITORING", by_class)
+        gov_id = by_class["BI_GOV_FOUNDATION"].initiative_id
+        self.assertIn(gov_id, by_class["BI_DATA_QUALITY_MONITORING"].dependencies)
+
 
 
 if __name__ == "__main__":

@@ -30,6 +30,18 @@ class AssessmentServiceTestCase(unittest.TestCase):
         self.assertIn(result.maturity_level, [1, 2, 3, 4])
         self.assertEqual(set(result.dimension_scores.keys()), {"PA_D1", "PA_D2", "PA_D3"})
 
+
+    def test_critical_dimension_evidence_is_included(self) -> None:
+        answers = {
+            "DA_01": 1, "DA_02": 1, "DA_03": 2, "DA_04": 2,
+            "DA_05": 5, "DA_06": 5, "DA_07": 5, "DA_08": 5,
+            "DA_09": 5, "DA_10": 5, "DA_11": 5, "DA_12": 5, "COUP_01": 5,
+        }
+        result = self.service.compute_bi_assessment("as-3", answers)
+        self.assertEqual(result.critical_dimension_id, "BI_D1")
+        self.assertGreater(result.critical_dimension_severity, 0.0)
+        self.assertGreaterEqual(len(result.critical_dimension_top_items), 2)
+
     def test_score_rule_scale_to_100(self) -> None:
         config = QuestionScoringConfig(type="scale_to_100")
         self.assertEqual(self.service._score_answer(3, config), 50.0)

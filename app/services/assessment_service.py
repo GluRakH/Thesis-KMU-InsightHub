@@ -44,6 +44,9 @@ class AssessmentResult(BaseModel):
     dimension_scores: dict[str, float]
     dimension_levels: dict[str, str]
     findings: dict[str, str]
+    critical_dimension_id: str = Field(default="")
+    critical_dimension_severity: float = Field(default=0.0)
+    critical_dimension_top_items: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class AssessmentService:
@@ -73,6 +76,9 @@ class AssessmentService:
             dimension_scores=result.dimension_scores,
             dimension_levels=result.dimension_levels,
             findings=result.findings,
+            critical_dimension_id=result.critical_dimension_id,
+            critical_dimension_severity=result.critical_dimension_severity,
+            critical_dimension_top_items=result.critical_dimension_top_items,
             questionnaire_version=version,
             scoring_version=version,
             model_version="assessment-rules-v1",
@@ -91,6 +97,9 @@ class AssessmentService:
             dimension_scores=result.dimension_scores,
             dimension_levels=result.dimension_levels,
             findings=result.findings,
+            critical_dimension_id=result.critical_dimension_id,
+            critical_dimension_severity=result.critical_dimension_severity,
+            critical_dimension_top_items=result.critical_dimension_top_items,
             questionnaire_version=version,
             scoring_version=version,
             model_version="assessment-rules-v1",
@@ -126,6 +135,8 @@ class AssessmentService:
                 f"Dimension {dimension_id} bewertet als {dimension_label}.",
             )
 
+        critical_dimension_id, critical_dimension_severity, critical_dimension_top_items = self._critical_dimension_evidence(answers, config, dimension_scores)
+
         return AssessmentResult(
             score=overall_score,
             maturity_level=maturity_level,
@@ -133,7 +144,45 @@ class AssessmentService:
             dimension_scores=dimension_scores,
             dimension_levels=dimension_levels,
             findings=findings,
+            critical_dimension_id=critical_dimension_id,
+            critical_dimension_severity=critical_dimension_severity,
+            critical_dimension_top_items=critical_dimension_top_items,
         )
+
+
+    def _critical_dimension_evidence(
+        self, answers: dict[str, Any], config: AssessmentScoringConfig, dimension_scores: dict[str, float]
+    ) -> tuple[str, float, list[dict[str, Any]]]:
+        if not dimension_scores:
+            return "", 0.0, []
+        critical_dimension_id = min(dimension_scores.items(), key=lambda item: item[1])[0]
+        dimension = config.dimensions.get(critical_dimension_id)
+        if dimension is None:
+            return critical_dimension_id, 0.0, []
+
+        top_items: list[dict[str, Any]] = []
+        for question_id in dimension.questions:
+            answer = answers.get(question_id)
+            deficit = self._deficit_score(answer)
+            if deficit is None:
+                continue
+            top_items.append({"item_id": question_id, "answer": answer, "deficit_score": deficit})
+        top_items.sort(key=lambda item: item["deficit_score"], reverse=True)
+        top_items = top_items[:3]
+        severity = round(mean(item["deficit_score"] for item in top_items), 4) if top_items else 0.0
+        return critical_dimension_id, severity, top_items
+
+    @staticmethod
+    def _deficit_score(answer: Any, min_value: float = 1.0, max_value: float = 5.0) -> float | None:
+        if max_value <= min_value:
+            return None
+        try:
+            value = float(answer)
+        except (TypeError, ValueError):
+            return None
+
+        normalized = 1 - ((value - min_value) / (max_value - min_value))
+        return round(max(0.0, min(1.0, normalized)), 4)
 
     def _score_answer(self, answer: Any, score_config: QuestionScoringConfig) -> float:
         if score_config.type == "scale_minus_one":

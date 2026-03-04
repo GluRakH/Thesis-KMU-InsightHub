@@ -98,6 +98,52 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertIn("PriorityScore=2.5", markdown)
         self.assertIn("Target: Mindestwert >= aktueller Baseline", markdown)
 
+
+    def test_export_v12_includes_compact_evidence_and_measure_details(self) -> None:
+        pipeline = {
+            "bi": {
+                "summary": "BI",
+                "critical_dimension_id": "BI_D1",
+                "critical_dimension_severity": 0.72,
+                "critical_dimension_top_items": [{"item_id": "DA_01", "answer": 1, "deficit_score": 1.0}],
+            },
+            "pa": {
+                "summary": "PA",
+                "critical_dimension_id": "PA_D1",
+                "critical_dimension_severity": 0.64,
+                "critical_dimension_top_items": [{"item_id": "PA_01", "answer": 2, "deficit_score": 0.75}],
+            },
+            "synthesis": {"combined_summary": "combo", "recommendation": "reco"},
+        }
+        catalog = MeasureCatalog(
+            catalog_id="cat-2",
+            title="Test",
+            status=CatalogStatus.DRAFT,
+            synthesis_id="syn-1",
+            measures=[
+                Measure(
+                    measure_id="mea-1",
+                    initiative_id="INIT-BI-GOVERNANCE-01",
+                    title="Governance",
+                    description="Diagnose",
+                    category=MeasureCategory.GOVERNANCE,
+                    dimension="BI_D1",
+                    impact=5,
+                    effort=2,
+                    priority_score=3.25,
+                    deliverables=["D1", "D2", "D3"],
+                    kpi={"name": "K", "target": "T", "measurement": "M"},
+                    priority={"bucket": "now"},
+                )
+            ],
+        )
+        payload = build_export_payload(pipeline=pipeline, answers={}, catalog=catalog, export_version="1.2.0")
+        markdown = payload_to_markdown(payload)
+
+        self.assertEqual(payload["export_version"], "1.2.0")
+        self.assertIn("Severity: 0.72", markdown)
+        self.assertIn("Deliverable: D1", markdown)
+
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {
             "timestamp": datetime(2026, 1, 2, 3, 4, tzinfo=timezone.utc),

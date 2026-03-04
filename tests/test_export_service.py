@@ -55,6 +55,49 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertIn("Ohne Titel", markdown)
         self.assertIn("PriorityScore=1.5", markdown)
 
+    def test_export_v11_derives_legacy_priority_and_bucket_values(self) -> None:
+        pipeline = {
+            "bi": {"summary": "BI", "dimension_scores": {"BI_D1": 30.0}},
+            "pa": {"summary": "PA", "dimension_scores": {"PA_D1": 35.0}},
+            "synthesis": {"combined_summary": "combo", "recommendation": "reco"},
+        }
+        catalog = MeasureCatalog(
+            catalog_id="cat-legacy",
+            title="Legacy",
+            status=CatalogStatus.DRAFT,
+            synthesis_id="syn-legacy",
+            measures=[
+                Measure(
+                    measure_id="mea-1",
+                    title="M1",
+                    description="d",
+                    category=MeasureCategory.TECHNICAL,
+                    dimension="BI_D1",
+                    impact=5,
+                    effort=2,
+                    suggested_priority=1,
+                ),
+                Measure(
+                    measure_id="mea-2",
+                    title="M2",
+                    description="d",
+                    category=MeasureCategory.TECHNICAL,
+                    dimension="PA_D1",
+                    impact=3,
+                    effort=3,
+                    suggested_priority=3,
+                ),
+            ],
+        )
+
+        payload = build_export_payload(pipeline=pipeline, answers={}, catalog=catalog, export_version="1.1.0")
+        markdown = payload_to_markdown(payload)
+
+        self.assertIn("### NOW", markdown)
+        self.assertIn("### NEXT", markdown)
+        self.assertIn("PriorityScore=2.5", markdown)
+        self.assertIn("Target: Mindestwert >= aktueller Baseline", markdown)
+
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {
             "timestamp": datetime(2026, 1, 2, 3, 4, tzinfo=timezone.utc),

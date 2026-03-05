@@ -101,6 +101,68 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
         self.assertEqual(now_details[0].get("deliverables"), ["LLM-RACI"])
         self.assertEqual(now_details[1].get("title"), "Datenqualitätsregeln etablieren")
 
+
+    def test_llm_invalid_kpi_summary_falls_back_to_deterministic(self) -> None:
+        class InvalidKpiLLM:
+            def summarize_measure_catalog(self, focus: str, measures_by_bucket: dict[str, list[dict]]) -> dict:
+                return {
+                    "headline": "LLM Headline",
+                    "executive_summary": "LLM Summary",
+                    "now": ["Kurztext"],
+                    "next": [],
+                    "later": [],
+                    "risks_and_dependencies": [],
+                    "first_30_days": [],
+                    "measure_details": {
+                        "now": [
+                            {
+                                "title": "Data Governance Betriebsmodell aufbauen",
+                                "deliverables": ["D1", "D2", "D3"],
+                                "kpi_summary": "INVALID ITEM - parse error",
+                                "evidence_summary": "n/a",
+                                "trigger_refs": ["x"],
+                            }
+                        ],
+                        "next": [],
+                        "later": [],
+                    },
+                }
+
+        summary = build_catalog_summary(
+            focus="Governance stabilisieren",
+            measures_by_bucket=self.payload,
+            llm_client=InvalidKpiLLM(),
+            use_llm_texts=True,
+        )
+
+        detail = summary["measure_details"]["now"][0]
+        self.assertIn("Owner-Abdeckung", detail["kpi_summary"])
+        self.assertNotIn("INVALID", detail["kpi_summary"])
+        self.assertIn("Dimension BI_D1", detail["evidence_summary"])
+
+    def test_deterministic_trigger_refs_include_answer_and_deficit(self) -> None:
+        payload = {
+            "now": [
+                {
+                    "initiative_id": "INIT-BI-GOV-01",
+                    "title": "Data Governance Betriebsmodell aufbauen",
+                    "dimension": "BI_D1",
+                    "priority": 1,
+                    "dependencies": [],
+                    "deliverables": ["RACI", "Gremium", "Policy"],
+                    "kpi": {"name": "Owner-Abdeckung", "target": ">=90%", "measurement": "Monatliches Audit", "frequency": "monthly"},
+                    "trigger_items": [{"item_id": "DA_01", "label": "Ownership", "answer": 2, "deficit_score": 0.75}],
+                    "rationale": "Für BI_D1 priorisiert.",
+                }
+            ],
+            "next": [],
+            "later": [],
+        }
+        summary = build_catalog_summary(focus="x", measures_by_bucket=payload)
+        ref = summary["measure_details"]["now"][0]["trigger_refs"][0]
+        self.assertIn("answer=2", ref)
+        self.assertIn("deficit=0.75", ref)
+
     def test_invalid_item_is_marked_invalid(self) -> None:
         invalid_payload = {
             "now": [

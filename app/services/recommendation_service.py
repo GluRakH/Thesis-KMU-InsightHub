@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -8,6 +9,9 @@ from uuid import uuid4
 from adapters.llm_client import LLMClient
 from app.services.initiative_templates import TEMPLATE_VERSION, template_for_dimension
 from domain.models import CatalogStatus, Measure, MeasureCatalog, MeasureCategory, Synthesis
+
+
+logger = logging.getLogger(__name__)
 
 
 class RecommendationService:
@@ -49,10 +53,11 @@ class RecommendationService:
         critical_weights = self._criticality_weights(scores)
 
         ranked_dimensions = sorted(scores.items(), key=lambda item: item[1])
+        selected_dimensions = self._select_top_dimensions(ranked_dimensions)
         measures: list[Measure] = []
         sequence_by_domain: dict[str, int] = {"BI": 0, "PA": 0, "GLOBAL": 0}
 
-        for dimension, _ in ranked_dimensions:
+        for dimension in selected_dimensions:
             template = template_for_dimension(dimension)
             level = levels.get(dimension, "L1")
             domain = self._domain_from_dimension(dimension)
@@ -176,10 +181,7 @@ class RecommendationService:
                 if question_id not in answers:
                     continue
                 question_meta = self._question_meta.get(question_id, {})
-                direction = str(question_meta.get("direction") or "")
-                if not direction:
-                    self.last_trigger_warnings.append(f"{question_id}: direction fehlt")
-                    continue
+                direction = str(question_meta.get("direction") or "").strip().lower() or "higher_is_better"
                 min_v = float(question_meta.get("min", 1.0))
                 max_v = float(question_meta.get("max", 5.0))
                 answer = answers.get(question_id)
@@ -343,11 +345,60 @@ class RecommendationService:
     @staticmethod
     def _build_now_next_later(measures: list[Measure]) -> dict[str, list[str]]:
         ordered = sorted(measures, key=lambda m: (-m.priority_score, m.initiative_id))
+        now: list[str] = []
+        next_items: list[str] = []
+        later: list[str] = []
+        selected: set[str] = set()
+
+        for measure in ordered:
+            dependencies = set(measure.dependencies)
+            if len(now) < 2 and dependencies.issubset(selected):
+                now.append(measure.initiative_id)
+                selected.add(measure.initiative_id)
+
+        for measure in ordered:
+            if measure.initiative_id in selected:
+                continue
+            dependencies = set(measure.dependencies)
+            if len(next_items) < 2 and dependencies.issubset(selected):
+                next_items.append(measure.initiative_id)
+                selected.add(measure.initiative_id)
+
+        for measure in ordered:
+            if measure.initiative_id in selected:
+                continue
+            later.append(measure.initiative_id)
+
         return {
-            "now": [measure.initiative_id for measure in ordered[:3]],
-            "next": [measure.initiative_id for measure in ordered[3:6]],
-            "later": [measure.initiative_id for measure in ordered[6:]],
+            "now": now,
+            "next": next_items,
+            "later": later,
         }
+
+    def _select_top_dimensions(self, ranked_dimensions: list[tuple[str, float]], limit: int = 4) -> list[str]:
+        if len(ranked_dimensions) <= limit:
+            return [dimension for dimension, _ in ranked_dimensions]
+
+        selected = [dimension for dimension, _ in ranked_dimensions[:limit]]
+        domains_in_all = {self._domain_from_dimension(dimension) for dimension, _ in ranked_dimensions}
+        if {"BI", "PA"}.issubset(domains_in_all):
+            selected_domains = {self._domain_from_dimension(dimension) for dimension in selected}
+            for missing_domain in ("BI", "PA"):
+                if missing_domain in selected_domains:
+                    continue
+                replacement = next(
+                    (dimension for dimension, _ in ranked_dimensions if self._domain_from_dimension(dimension) == missing_domain and dimension not in selected),
+                    None,
+                )
+                if replacement is None:
+                    continue
+                for idx in range(len(selected) - 1, -1, -1):
+                    if self._domain_from_dimension(selected[idx]) != missing_domain:
+                        selected[idx] = replacement
+                        break
+                selected_domains = {self._domain_from_dimension(dimension) for dimension in selected}
+
+        return selected
 
     @staticmethod
     def _sequence_reason(measure: Measure, rules_applied: dict[str, Any]) -> str:
@@ -379,10 +430,13 @@ class RecommendationService:
                 continue
             scale = question.get("scale") or {}
             answer_type = type_map.get(str(question.get("answer_type") or question.get("type", "")).lower(), "unknown")
+            if scale:
+                answer_type = "likert"
             raw_direction = question.get("direction")
             direction = str(raw_direction or "").strip().lower()
-            if not direction and answer_type in {"likert", "single_choice", "multi_choice", "number"}:
+            if not direction:
                 direction = "higher_is_better"
+                logger.warning("Question %s has no direction; defaulting to higher_is_better", question_id)
             meta[question_id] = {
                 "min": float(scale.get("min", 1)),
                 "max": float(scale.get("max", 5)),

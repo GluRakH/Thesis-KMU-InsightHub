@@ -39,6 +39,8 @@ def _trigger_items_from_measure(measure: Measure) -> list[dict[str, Any]]:
     trigger_items = (measure.evidence or {}).get("trigger_items", []) if isinstance(measure.evidence, dict) else []
     normalized: list[dict[str, Any]] = []
     for item in trigger_items:
+        if hasattr(item, "model_dump"):
+            item = item.model_dump()
         if not isinstance(item, dict):
             continue
         label = str(item.get("question_text") or item.get("label") or item.get("item_id") or "").strip()

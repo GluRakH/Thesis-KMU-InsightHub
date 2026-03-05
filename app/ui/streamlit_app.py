@@ -585,6 +585,8 @@ def _render_measures() -> None:
         summary = build_catalog_summary(
             focus=str(pipeline["synthesis"].get("priority_focus", "")),
             measures_by_bucket=by_bucket,
+            llm_client=_build_llm_client(),
+            use_llm_texts=st.session_state.get("use_llm_texts", True),
         )
         st.session_state["catalog_summary"] = summary
 
@@ -621,7 +623,7 @@ def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], fin
 
 
 def _render_catalog_summary(summary: dict[str, object]) -> None:
-    st.markdown("### Maßnahmenkatalog (deterministisch, textgenerierung unterstützt)")
+    st.markdown("### Maßnahmenkatalog (deterministisch, optionale LLM-Textunterstützung)")
     st.info(summary.get("info", "Ableitung regelbasiert; Text optional generiert."))
     st.markdown(f"**{summary.get('headline', 'Ergebnis Maßnahmenkatalog')}**")
     st.write(summary.get("executive_summary", ""))

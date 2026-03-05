@@ -42,7 +42,7 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(now_items), 1)
 
 
-    def test_llm_text_enrichment_adds_impulse_to_description(self) -> None:
+    def test_measure_generation_stays_deterministic_when_llm_flag_enabled(self) -> None:
         synthesis = Synthesis(
             synthesis_id="syn-llm",
             answer_set_id="as-llm",
@@ -61,8 +61,8 @@ class RecommendationServiceTestCase(unittest.TestCase):
             use_llm_texts=True,
             answers={"DA_01": 1, "DA_02": 2, "PA_01": 1, "PA_02": 2},
         )
-        self.assertTrue(any("LLM-Impuls:" in item.description for item in catalog.measures))
-        self.assertTrue(any((item.evidence or {}).get("llm_impulse") for item in catalog.measures))
+        self.assertTrue(all("LLM-Impuls:" not in item.description for item in catalog.measures))
+        self.assertTrue(all(not (item.evidence or {}).get("llm_impulse") for item in catalog.measures))
 
     def test_evidence_extraction_range_and_size(self) -> None:
         evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})

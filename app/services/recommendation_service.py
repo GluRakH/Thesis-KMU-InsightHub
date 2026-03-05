@@ -131,8 +131,8 @@ class RecommendationService:
             measure.evidence["template_id"] = measure.measure_class
             measure.evidence["template_version"] = measure.prompt_version
 
-        if use_llm_texts:
-            self._enrich_measures_with_llm(measures, synthesis)
+        # Maßnahmenpakete bleiben bewusst deterministisch.
+        # use_llm_texts wird in nachgelagerten Textschritten (Zusammenfassung/Details) verwendet.
 
         self.last_rules_applied = rules_applied
 
@@ -145,31 +145,6 @@ class RecommendationService:
             model_version="recommendation-v1.3.0",
             prompt_version=f"templates-{TEMPLATE_VERSION}",
         )
-
-    def _enrich_measures_with_llm(self, measures: list[Measure], synthesis: Synthesis) -> None:
-        ordered = sorted(measures, key=lambda item: item.suggested_priority)
-        focus_areas = [
-            (
-                f"{measure.dimension}: {measure.title} | "
-                f"Defizit: {(measure.evidence or {}).get('deficit_statement', '')}"
-            )
-            for measure in ordered
-        ]
-        constraints = [str(item).strip() for item in synthesis.context_restrictions if str(item).strip()]
-        if synthesis.priority_focus.strip():
-            constraints.append(f"Prioritätsfokus: {synthesis.priority_focus.strip()}")
-
-        suggestions = self._llm_client.draft_measures(
-            focus_areas=focus_areas,
-            constraints=constraints,
-            max_measures=len(ordered),
-        )
-        for measure, suggestion in zip(ordered, suggestions):
-            llm_impulse = str(suggestion).strip()
-            if not llm_impulse:
-                continue
-            measure.description = f"{measure.description} LLM-Impuls: {llm_impulse}"
-            measure.evidence["llm_impulse"] = llm_impulse
 
     @staticmethod
     def calculate_deficit_score(answer: Any, min_value: float, max_value: float) -> float | None:

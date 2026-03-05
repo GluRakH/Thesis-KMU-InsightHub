@@ -44,6 +44,63 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
         self.assertTrue(summary.get("headline"))
         self.assertTrue(summary.get("measure_details", {}).get("now"))
 
+    def test_build_catalog_summary_fills_missing_llm_measure_details(self) -> None:
+        payload = {
+            "now": [
+                self.payload["now"][0],
+                {
+                    "initiative_id": "INIT-BI-DQ-02",
+                    "title": "Datenqualitätsregeln etablieren",
+                    "dimension": "BI_D2",
+                    "priority": 2,
+                    "dependencies": [],
+                    "deliverables": ["Regelwerk", "Dashboard", "Review"],
+                    "kpi": {"name": "DQ-Fehlerquote", "target": "<5%", "measurement": "Wöchentlich"},
+                    "trigger_items": [{"item_id": "DA_02", "label": "DA_02"}],
+                    "rationale": "Für BI_D2 priorisiert, weil DQ-Defizite dominieren.",
+                },
+            ],
+            "next": [],
+            "later": [],
+        }
+
+        class PartialDetailsLLM:
+            def summarize_measure_catalog(self, focus: str, measures_by_bucket: dict[str, list[dict]]) -> dict:
+                return {
+                    "headline": "LLM Headline",
+                    "executive_summary": "LLM Summary",
+                    "now": ["Kurztext 1", "Kurztext 2"],
+                    "next": [],
+                    "later": [],
+                    "risks_and_dependencies": [],
+                    "first_30_days": [],
+                    "measure_details": {
+                        "now": [
+                            {
+                                "title": "Data Governance Betriebsmodell aufbauen",
+                                "deliverables": ["LLM-RACI"],
+                                "kpi_summary": "LLM KPI",
+                                "evidence_summary": "LLM Evidenz",
+                                "trigger_refs": ["DA_01"],
+                            }
+                        ],
+                        "next": [],
+                        "later": [],
+                    },
+                }
+
+        summary = build_catalog_summary(
+            focus="Governance stabilisieren",
+            measures_by_bucket=payload,
+            llm_client=PartialDetailsLLM(),
+            use_llm_texts=True,
+        )
+
+        now_details = summary.get("measure_details", {}).get("now", [])
+        self.assertEqual(len(now_details), 2)
+        self.assertEqual(now_details[0].get("deliverables"), ["LLM-RACI"])
+        self.assertEqual(now_details[1].get("title"), "Datenqualitätsregeln etablieren")
+
 
 if __name__ == "__main__":
     unittest.main()

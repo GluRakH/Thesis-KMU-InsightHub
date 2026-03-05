@@ -31,10 +31,65 @@ def build_catalog_summary(
         "later": llm_summary.get("later") or deterministic_summary["later"],
         "risks_and_dependencies": llm_summary.get("risks_and_dependencies") or deterministic_summary["risks_and_dependencies"],
         "first_30_days": llm_summary.get("first_30_days") or deterministic_summary["first_30_days"],
-        "measure_details": llm_summary.get("measure_details") or deterministic_summary["measure_details"],
+        "measure_details": _merge_measure_details(
+            deterministic_details=deterministic_summary["measure_details"],
+            llm_details=llm_summary.get("measure_details"),
+        ),
         "generation_mode": "deterministic+llm_text",
         "info": "Ableitung regelbasiert; Zusammenfassung und Detailtexte durch LLM unterstützt.",
     }
+
+
+def _merge_measure_details(
+    deterministic_details: dict[str, list[dict[str, Any]]],
+    llm_details: dict[str, list[dict[str, Any]]] | None,
+) -> dict[str, list[dict[str, Any]]]:
+    if not isinstance(llm_details, dict):
+        return deterministic_details
+
+    merged: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
+    for bucket in ("now", "next", "later"):
+        fallback_items = deterministic_details.get(bucket, [])
+        fallback_by_title = {
+            str(item.get("title") or "").strip().lower(): item
+            for item in fallback_items
+            if str(item.get("title") or "").strip()
+        }
+        used_titles: set[str] = set()
+        llm_bucket = llm_details.get(bucket, []) if isinstance(llm_details.get(bucket), list) else []
+
+        for idx, llm_item in enumerate(llm_bucket):
+            if not isinstance(llm_item, dict):
+                continue
+
+            title_key = str(llm_item.get("title") or "").strip().lower()
+            fallback = fallback_by_title.get(title_key)
+            if fallback is None and idx < len(fallback_items):
+                fallback = fallback_items[idx]
+
+            if fallback is None:
+                fallback = {"title": llm_item.get("title")}
+
+            if title_key:
+                used_titles.add(title_key)
+
+            merged[bucket].append(
+                {
+                    "title": llm_item.get("title") or fallback.get("title") or "",
+                    "deliverables": llm_item.get("deliverables") or fallback.get("deliverables") or [],
+                    "kpi_summary": llm_item.get("kpi_summary") or fallback.get("kpi_summary") or "",
+                    "evidence_summary": llm_item.get("evidence_summary") or fallback.get("evidence_summary") or "",
+                    "trigger_refs": llm_item.get("trigger_refs") or fallback.get("trigger_refs") or [],
+                }
+            )
+
+        for fallback in fallback_items:
+            title_key = str(fallback.get("title") or "").strip().lower()
+            if title_key and title_key in used_titles:
+                continue
+            merged[bucket].append(fallback)
+
+    return merged
 
 
 def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:

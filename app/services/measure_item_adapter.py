@@ -55,7 +55,25 @@ def _trigger_items_from_measure(measure: Measure) -> list[dict[str, Any]]:
             }
         )
     normalized.sort(key=lambda entry: entry["deficit_score"], reverse=True)
-    return normalized[:3]
+    if normalized:
+        return normalized[:3]
+
+    evidence = measure.evidence if isinstance(measure.evidence, dict) else {}
+    severity = evidence.get("severity")
+    try:
+        severity_value = float(severity)
+    except (TypeError, ValueError):
+        severity_value = 0.0
+
+    return [
+        {
+            "item_id": f"{measure.dimension}_FALLBACK",
+            "label": f"Aggregierter Handlungsbedarf in {measure.dimension}",
+            "answer_value": "aus Dimensionsscore abgeleitet",
+            "deficit_score": max(0.0, min(1.0, severity_value)),
+            "dimension_id": measure.dimension,
+        }
+    ]
 
 
 def _diagnosis(template_text: str, dimension: str, trigger_items: list[dict[str, Any]], fallback: str) -> str:

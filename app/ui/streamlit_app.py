@@ -578,7 +578,7 @@ def _render_measures() -> None:
 
     edited = st.data_editor(
         editor_data,
-        use_container_width=True,
+        width="stretch",
         num_rows="fixed",
         disabled=["measure_id", "initiative_id", "titel", "kategorie", "impact", "effort"],
         key="selection_editor",

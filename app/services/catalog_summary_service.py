@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
 
 from adapters.llm_client import LLMClient
+
+logger = logging.getLogger(__name__)
 
 
 def build_catalog_summary(
@@ -10,13 +13,14 @@ def build_catalog_summary(
     measures_by_bucket: dict[str, list[dict[str, Any]]],
     llm_client: LLMClient | None = None,
     use_llm_texts: bool = False,
+    dev_mode: bool = False,
 ) -> dict[str, Any]:
-    deterministic_summary = _build_deterministic_summary(focus=focus, measures_by_bucket=measures_by_bucket)
+    deterministic_summary = _build_deterministic_summary(focus=focus, measures_by_bucket=measures_by_bucket, dev_mode=dev_mode)
 
     if not use_llm_texts or llm_client is None:
         return deterministic_summary
 
-    llm_payload = _build_llm_payload(measures_by_bucket)
+    llm_payload = _build_llm_payload(measures_by_bucket, dev_mode=dev_mode)
     llm_summary = llm_client.summarize_measure_catalog(
         focus=focus,
         measures_by_bucket=llm_payload,
@@ -56,6 +60,7 @@ def _merge_measure_details(
             if str(item.get("title") or "").strip()
         }
         used_titles: set[str] = set()
+        used_fallback_indices: set[int] = set()
         llm_bucket = llm_details.get(bucket, []) if isinstance(llm_details.get(bucket), list) else []
 
         for idx, llm_item in enumerate(llm_bucket):
@@ -64,14 +69,20 @@ def _merge_measure_details(
 
             title_key = str(llm_item.get("title") or "").strip().lower()
             fallback = fallback_by_title.get(title_key)
+            fallback_index = -1
             if fallback is None and idx < len(fallback_items):
                 fallback = fallback_items[idx]
+                fallback_index = idx
+            elif fallback is not None:
+                fallback_index = fallback_items.index(fallback)
 
             if fallback is None:
                 fallback = {"title": llm_item.get("title")}
 
             if title_key:
                 used_titles.add(title_key)
+            if fallback_index >= 0:
+                used_fallback_indices.add(fallback_index)
 
             merged[bucket].append(
                 {
@@ -83,8 +94,10 @@ def _merge_measure_details(
                 }
             )
 
-        for fallback in fallback_items:
+        for fallback_idx, fallback in enumerate(fallback_items):
             title_key = str(fallback.get("title") or "").strip().lower()
+            if fallback_idx in used_fallback_indices:
+                continue
             if title_key and title_key in used_titles:
                 continue
             merged[bucket].append(fallback)
@@ -92,23 +105,56 @@ def _merge_measure_details(
     return merged
 
 
-def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+def _validated_item(item: dict[str, Any], dev_mode: bool = False) -> tuple[dict[str, Any], list[str]]:
+    errors: list[str] = []
+    kpi = item.get("kpi") if isinstance(item.get("kpi"), dict) else {}
+    deliverables = item.get("deliverables") if isinstance(item.get("deliverables"), list) else []
+    trigger_items = item.get("trigger_items") if isinstance(item.get("trigger_items"), list) else []
+    if len(deliverables) != 3:
+        errors.append("deliverables muss exakt 3 Einträge enthalten")
+    for field in ("name", "target", "measurement", "frequency"):
+        if not str(kpi.get(field) or "").strip():
+            errors.append(f"kpi.{field} fehlt")
+    if not trigger_items:
+        errors.append("mindestens ein trigger_item erforderlich")
+
+    if errors:
+        logger.error("Invalid measure item %s: %s", item.get('initiative_id') or item.get('title'), '; '.join(errors))
+    if errors and dev_mode:
+        raise ValueError(f"INVALID measure item {item.get('initiative_id') or item.get('title')}: {'; '.join(errors)}")
+
+    normalized = dict(item)
+    normalized["_validation_errors"] = errors
+    return normalized, errors
+
+
+def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[dict[str, Any]]], dev_mode: bool = False) -> dict[str, Any]:
     def _bullet(item: dict[str, Any]) -> str:
         return f"{item.get('initiative_id')}: {item.get('title')} ({item.get('dimension')}, Rang {item.get('priority')})"
 
     details: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
     for bucket in ("now", "next", "later"):
-        for item in measures_by_bucket.get(bucket, []):
+        for raw_item in measures_by_bucket.get(bucket, []):
+            item, errors = _validated_item(raw_item, dev_mode=dev_mode)
             triggers = item.get("trigger_items", [])[:3]
+            if errors:
+                details[bucket].append(
+                    {
+                        "title": f"INVALID: {item.get('title')}",
+                        "deliverables": item.get("deliverables", []),
+                        "kpi_summary": f"INVALID ITEM – {'; '.join(errors)}",
+                        "evidence_summary": item.get("rationale", ""),
+                        "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in triggers],
+                    }
+                )
+                continue
+
+            kpi = item.get("kpi") or {}
             details[bucket].append(
                 {
                     "title": item.get("title"),
                     "deliverables": item.get("deliverables", [])[:3],
-                    "kpi_summary": (
-                        f"{(item.get('kpi') or {}).get('name') or 'KPI nicht definiert'} | "
-                        f"Ziel {(item.get('kpi') or {}).get('target') or 'n/a'} | "
-                        f"Messung {(item.get('kpi') or {}).get('measurement') or 'n/a'}"
-                    ),
+                    "kpi_summary": f"{kpi.get('name')} | Ziel {kpi.get('target')} | Messung {kpi.get('measurement')}",
                     "evidence_summary": item.get("rationale", ""),
                     "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in triggers],
                 }
@@ -134,12 +180,18 @@ def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[
     }
 
 
-def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]]) -> dict[str, list[dict[str, Any]]]:
+def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]], dev_mode: bool = False) -> dict[str, list[dict[str, Any]]]:
     payload: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
     for bucket in ("now", "next", "later"):
-        for item in measures_by_bucket.get(bucket, []):
+        for raw_item in measures_by_bucket.get(bucket, []):
+            item, errors = _validated_item(raw_item, dev_mode=dev_mode)
             kpi = item.get("kpi") if isinstance(item.get("kpi"), dict) else {}
             trigger_items = item.get("trigger_items") if isinstance(item.get("trigger_items"), list) else []
+            kpi_summary = (
+                f"INVALID ITEM – {'; '.join(errors)}"
+                if errors
+                else f"{kpi.get('name')} | Ziel {kpi.get('target')} | Messung {kpi.get('measurement')}"
+            )
             payload[bucket].append(
                 {
                     "initiative_id": item.get("initiative_id"),
@@ -148,11 +200,7 @@ def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]]) -> d
                     "priority": item.get("priority"),
                     "dependencies": item.get("dependencies", []),
                     "deliverables": item.get("deliverables", [])[:3],
-                    "kpi_summary": (
-                        f"{kpi.get('name') or 'KPI nicht definiert'} | "
-                        f"Ziel {kpi.get('target') or 'n/a'} | "
-                        f"Messung {kpi.get('measurement') or 'n/a'}"
-                    ),
+                    "kpi_summary": kpi_summary,
                     "evidence_summary": item.get("rationale", ""),
                     "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in trigger_items[:3]],
                 }

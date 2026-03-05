@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from adapters.llm_client import LLMClient
 from app.services.assessment_service import AssessmentService
+from app.services.catalog_summary_service import build_catalog_summary
 from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
 from app.services.questionnaire_service import QuestionType, QuestionnaireService
 from app.services.recommendation_service import RecommendationService
@@ -71,6 +72,7 @@ def _init_state() -> None:
         "active_step": "Start",
         "use_llm_texts": True,
         "catalog_summary": None,
+        "rules_applied": {},
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -417,6 +419,8 @@ def _render_results() -> None:
         st.write(pipeline["pa"]["summary"])
         st.json(pipeline["pa"]["dimension_scores"])
 
+    _render_result_legend()
+
     st.markdown("### Synthese")
     st.write(pipeline["synthesis"]["combined_summary"])
     st.write(f"**Fokus:** {pipeline['synthesis']['priority_focus']}")
@@ -473,7 +477,7 @@ def _render_measures() -> None:
         st.warning("Bitte zuerst Ergebnisse berechnen.")
         return
 
-    st.info("Standardmäßig wird eine lokale Ollama-Installation für Textverarbeitung genutzt (Fallback bei Nichterreichbarkeit).")
+    st.info("Ableitung ist regelbasiert-deterministisch. Optionale LLM-Nutzung ist nur für Formulierungstexte gedacht.")
 
     if st.button("LLM/Ollama-Verbindung prüfen"):
         status = _build_llm_client().check_connection()
@@ -490,7 +494,8 @@ def _render_measures() -> None:
             st.error("Synthese konnte nicht geladen werden. Bitte Ergebnisse neu berechnen.")
             return
 
-        catalog = RecommendationService(llm_client=_build_llm_client()).generate_catalog(
+        recommendation_service = RecommendationService(llm_client=_build_llm_client())
+        catalog = recommendation_service.generate_catalog(
             synthesis=synthesis_model,
             bi_maturity_label=pipeline["bi"]["level_label"],
             pa_maturity_label=pipeline["pa"]["level_label"],
@@ -499,6 +504,7 @@ def _render_measures() -> None:
             use_llm_texts=st.session_state.get("use_llm_texts", True),
             answers=st.session_state.get("answers", {}),
         )
+        st.session_state["rules_applied"] = recommendation_service.last_rules_applied
 
         with session_factory() as session:
             PersistenceRepository(session).save_catalog(catalog)
@@ -576,7 +582,7 @@ def _render_measures() -> None:
             PersistenceRepository(session).save_user_selection(selection)
 
         by_bucket = _build_catalog_summary_payload(catalog, selected_ids, final_priority)
-        summary = _build_llm_client().summarize_measure_catalog(
+        summary = build_catalog_summary(
             focus=str(pipeline["synthesis"].get("priority_focus", "")),
             measures_by_bucket=by_bucket,
         )
@@ -608,13 +614,15 @@ def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], fin
                 "kpi": measure.kpi,
                 "diagnosis": measure.description,
                 "trigger_items": (measure.evidence or {}).get("trigger_items", [])[:3],
+                "rationale": (measure.evidence or {}).get("rationale", ""),
             }
         )
     return by_bucket
 
 
 def _render_catalog_summary(summary: dict[str, object]) -> None:
-    st.markdown("### Ergebnis Maßnahmenkatalog (LLM)")
+    st.markdown("### Maßnahmenkatalog (deterministisch, textgenerierung unterstützt)")
+    st.info(summary.get("info", "Ableitung regelbasiert; Text optional generiert."))
     st.markdown(f"**{summary.get('headline', 'Ergebnis Maßnahmenkatalog')}**")
     st.write(summary.get("executive_summary", ""))
 
@@ -656,13 +664,20 @@ def _render_catalog_summary(summary: dict[str, object]) -> None:
                 trigger_refs = entry.get("trigger_refs") if isinstance(entry.get("trigger_refs"), list) else []
                 st.markdown(f"- **{title}**")
                 for deliverable in deliverables:
-                    st.markdown(f"  - Deliverable: {deliverable}")
+                    st.markdown(f"  - Lieferobjekt: {deliverable}")
                 if kpi_summary:
                     st.markdown(f"  - KPI: {kpi_summary}")
                 if evidence_summary:
                     st.markdown(f"  - Evidenz: {evidence_summary}")
                 for trigger_ref in trigger_refs:
-                    st.markdown(f"  - Trigger-Referenz: {trigger_ref}")
+                    st.markdown(f"  - Evidenz-Trigger: {trigger_ref}")
+
+
+def _render_result_legend() -> None:
+    st.markdown("**Legende**")
+    st.markdown("- Score 0–100: 0 = sehr hoher Defizitgrad, 100 = sehr reif.")
+    st.markdown("- Kritischste Dimension: niedrigster Dimensionsscore.")
+    st.markdown("- Severity: aggregierter Defizitwert der Top-Trigger-Items (0–1).")
 
 def _build_markdown_export(export_version: str) -> str:
     use_case_id = st.session_state["use_case_id"]
@@ -683,6 +698,7 @@ def _build_markdown_export(export_version: str) -> str:
         catalog=catalog,
         export_version=export_version,
         catalog_summary=st.session_state.get("catalog_summary"),
+        rules_applied=st.session_state.get("rules_applied", {}),
     )
     return payload_to_markdown(payload)
 
@@ -691,9 +707,9 @@ def _render_export() -> None:
     st.subheader("Export")
     export_version = st.selectbox(
         "Export-Version",
-        options=["1.0.0", "1.1.0", "1.2.0"],
-        index=1,
-        help="1.0.0 bleibt unverändert, 1.1.0 bleibt verfügbar, 1.2.0 enthält Trigger-Evidenz, konkrete Deliverables und deterministische Buckets.",
+        options=["2.0.0"],
+        index=0,
+        help="2.0.0 enthält vollständige Traceability (Evidence, Gates, KPI-Vollstruktur, Run-ID).",
     )
 
     markdown_payload = _build_markdown_export(export_version)
@@ -715,6 +731,7 @@ def _render_export() -> None:
                 catalog=catalog,
                 export_version=export_version,
                 catalog_summary=st.session_state.get("catalog_summary"),
+                rules_applied=st.session_state.get("rules_applied", {}),
             )
         )
         if (use_case_id and answer_set_id and pipeline)

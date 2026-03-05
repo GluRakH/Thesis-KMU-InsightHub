@@ -132,7 +132,13 @@ class LLMClient:
             "jede Liste enthält für jede Maßnahme ein Objekt mit 'title', 'deliverables' (Liste), "
             "'kpi_summary', 'evidence_summary' und 'trigger_refs' (Liste kurzer Trigger-Referenzen)."
         )
-        content = self._run_text_task("summarize_measure_catalog", prompt, payload, output_key="catalog_summary")
+        content = self._run_text_task(
+            "summarize_measure_catalog",
+            prompt,
+            payload,
+            output_key="catalog_summary",
+            retries=2,
+        )
 
         try:
             parsed = json.loads(content) if isinstance(content, str) else content
@@ -235,7 +241,14 @@ class LLMClient:
                 "message": f"Ollama-Verbindung fehlgeschlagen: {type(exc).__name__}: {exc}",
             }
 
-    def _run_text_task(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
+    def _run_text_task(
+        self,
+        task_name: str,
+        prompt: str,
+        payload: dict[str, Any],
+        output_key: str,
+        retries: int = 0,
+    ) -> str:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -250,27 +263,31 @@ class LLMClient:
             )
             return output
 
-        try:
-            output = self._call_api(prompt, payload, output_key)
-            self._write_trace(
-                task_name=task_name,
-                timestamp=timestamp,
-                input_hash=input_hash,
-                mode="api",
-                output_preview=output,
-            )
-            return output
-        except Exception as exc:
-            output = self._dummy_response(task_name, payload)
-            self._write_trace(
-                task_name=task_name,
-                timestamp=timestamp,
-                input_hash=input_hash,
-                mode="fallback",
-                output_preview=output,
-                error=f"{type(exc).__name__}: {exc}",
-            )
-            return output
+        last_error: Exception | None = None
+        for _ in range(retries + 1):
+            try:
+                output = self._call_api(prompt, payload, output_key)
+                self._write_trace(
+                    task_name=task_name,
+                    timestamp=timestamp,
+                    input_hash=input_hash,
+                    mode="api",
+                    output_preview=output,
+                )
+                return output
+            except Exception as exc:
+                last_error = exc
+
+        output = self._dummy_response(task_name, payload)
+        self._write_trace(
+            task_name=task_name,
+            timestamp=timestamp,
+            input_hash=input_hash,
+            mode="fallback",
+            output_preview=output,
+            error=f"{type(last_error).__name__}: {last_error}",
+        )
+        return output
 
     def _call_api(self, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         headers = {"Content-Type": "application/json"}
@@ -372,51 +389,46 @@ class LLMClient:
             ]
             return json.dumps({"measures": measures}, ensure_ascii=False)
         if task_name == "summarize_measure_catalog":
-            return json.dumps(
-                {
-                    "headline": "Ergebnis Maßnahmenkatalog",
-                    "executive_summary": "Der Katalog priorisiert zuerst Basismaßnahmen mit hohem Hebel und reduziert so kurzfristig die größten Reifegradlücken.",
-                    "now": [
-                        "Governance-Grundlagen und Rollen verbindlich festlegen.",
-                        "Datenqualitätsprobleme in den kritischsten Feldern systematisch beheben.",
-                    ],
-                    "next": ["Skalierbare Analytics-/Automations-Standards in den Fachbereichen ausrollen."],
-                    "later": ["Erweiterte Use Cases nach stabiler Daten- und Prozessbasis schrittweise industrialisieren."],
-                    "risks_and_dependencies": ["Abhängigkeit von Datenqualität und klarer Ownership vor technischen Ausbaustufen."],
-                    "first_30_days": [
-                        "Sponsor und Kernteam benennen.",
-                        "Top-3-Maßnahmen in konkrete Arbeitspakete mit Verantwortlichen überführen.",
-                    ],
-                    "measure_details": {
-                        "now": [
-                            {
-                                "title": "Governance-Grundlagen und Rollen verbindlich festlegen.",
-                                "deliverables": [
-                                    "Rollenmodell für Data-/BI-Verantwortung verabschiedet.",
-                                    "RACI mit Eskalationswegen veröffentlicht.",
-                                    "Governance-Board-Takt mit Agenda und Protokoll etabliert.",
-                                ],
-                                "kpi_summary": "KPI: Owner-Abdeckung >= 90% und Review-Teilnahmequote.",
-                                "evidence_summary": "Abgeleitet aus niedrigen Werten in BI_D1 mit fehlender Ownership-Klarheit.",
-                                "trigger_refs": ["DA_01: Owner unklar", "DA_02: Governance-Prozess fehlt"],
-                            }
-                        ],
-                        "next": [
-                            {
-                                "title": "Skalierbare Analytics-/Automations-Standards ausrollen.",
-                                "deliverables": [
-                                    "Standard-Templates für Use-Case-Umsetzung eingeführt.",
-                                    "Qualitäts-Checkliste im Delivery-Prozess verankert.",
-                                    "Review-Routine mit Fachbereich und IT umgesetzt.",
-                                ],
-                                "kpi_summary": "KPI: Anteil standardisierter Use Cases und reduzierte Durchlaufzeit.",
-                                "evidence_summary": "Abgeleitet aus heterogener Prozessreife und wiederkehrenden Umsetzungsabweichungen.",
-                                "trigger_refs": ["PA_03: Prozessvarianz hoch", "COUP_02: Übergaben uneinheitlich"],
-                            }
-                        ],
-                        "later": [],
-                    },
-                },
-                ensure_ascii=False,
-            )
+            return json.dumps(LLMClient._build_catalog_summary_fallback(payload), ensure_ascii=False)
         return "Kein Ergebnis verfügbar."
+
+    @staticmethod
+    def _build_catalog_summary_fallback(payload: dict[str, Any]) -> dict[str, Any]:
+        measures_by_bucket = payload.get("measures_by_bucket", {}) if isinstance(payload, dict) else {}
+
+        def _short_item(item: dict[str, Any]) -> str:
+            title = str(item.get("title") or "Maßnahme").strip()
+            trigger = ""
+            refs = item.get("trigger_refs")
+            if isinstance(refs, list) and refs:
+                trigger = f" (Trigger: {refs[0]})"
+            return f"{title}{trigger}"
+
+        details: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
+        for bucket in ("now", "next", "later"):
+            for item in measures_by_bucket.get(bucket, []):
+                if not isinstance(item, dict):
+                    continue
+                details[bucket].append(
+                    {
+                        "title": str(item.get("title") or "Maßnahme"),
+                        "deliverables": [str(entry) for entry in item.get("deliverables", []) if str(entry).strip()][:3],
+                        "kpi_summary": str(item.get("kpi_summary") or "KPI aus Template übernehmen und baseline messen."),
+                        "evidence_summary": str(item.get("evidence_summary") or "Ableitung basiert auf Defiziten im Fragenkatalog."),
+                        "trigger_refs": [str(entry) for entry in item.get("trigger_refs", []) if str(entry).strip()][:3],
+                    }
+                )
+
+        return {
+            "headline": "Ergebnis Maßnahmenkatalog",
+            "executive_summary": f"Fokus: {payload.get('focus') or 'aus Scores abgeleitet'}. Die Beschreibung wurde aus den konkreten Maßnahmen, Triggern und KPI-Vorgaben erzeugt.",
+            "now": [_short_item(item) for item in measures_by_bucket.get("now", [])][:4],
+            "next": [_short_item(item) for item in measures_by_bucket.get("next", [])][:4],
+            "later": [_short_item(item) for item in measures_by_bucket.get("later", [])][:4],
+            "risks_and_dependencies": ["Abhängigkeiten aus der Sequenzierung prüfen und vor Umsetzung im Steering bestätigen."],
+            "first_30_days": [
+                "Owner je Top-Maßnahme benennen und Arbeitspakete terminieren.",
+                "Für jede Maßnahme KPI-Baseline und Zielwert im Reporting erfassen.",
+            ],
+            "measure_details": details,
+        }

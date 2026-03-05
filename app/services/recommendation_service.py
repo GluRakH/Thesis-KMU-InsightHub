@@ -21,6 +21,7 @@ class RecommendationService:
         self._config_path = config_path or Path("app/config/recommendation_catalog_v1.0.json")
         self._scoring_dir = scoring_dir or Path("app/config")
         self._question_meta = self._load_question_meta()
+        self._question_labels = self._load_question_labels()
         self._dimension_questions = self._load_dimension_questions()
         self.last_rules_applied: dict[str, Any] = {"gates": [], "thresholds": {}}
 
@@ -180,7 +181,7 @@ class RecommendationService:
                         "item_id": question_id,
                         "answer": answers.get(question_id),
                         "deficit_score": deficit,
-                        "label": question_id,
+                        "label": self._question_labels.get(question_id, question_id),
                     }
                 )
             items.sort(key=lambda x: x["deficit_score"], reverse=True)
@@ -197,7 +198,14 @@ class RecommendationService:
             if any(item["item_id"] == question_id for item in selected):
                 continue
             deficit = self.calculate_deficit_score(answers.get(question_id), *self._question_meta.get(question_id, (1.0, 5.0))) or 0.0
-            selected.append({"item_id": question_id, "answer": answers.get(question_id), "deficit_score": deficit, "label": question_id})
+            selected.append(
+                {
+                    "item_id": question_id,
+                    "answer": answers.get(question_id),
+                    "deficit_score": deficit,
+                    "label": self._question_labels.get(question_id, question_id),
+                }
+            )
         return selected[:3]
 
     @staticmethod
@@ -311,6 +319,19 @@ class RecommendationService:
             for question in payload.get("questions", [])
             if question.get("id")
         }
+
+    def _load_question_labels(self) -> dict[str, str]:
+        path = self._scoring_dir / "questionnaire_v1.0.json"
+        if not path.exists():
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        labels: dict[str, str] = {}
+        for question in payload.get("questions", []):
+            question_id = str(question.get("id") or "").strip()
+            text = str(question.get("text") or "").strip()
+            if question_id:
+                labels[question_id] = text or question_id
+        return labels
 
     def _load_dimension_questions(self) -> dict[str, list[str]]:
         dimensions: dict[str, list[str]] = {}

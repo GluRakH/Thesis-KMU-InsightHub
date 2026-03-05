@@ -64,6 +64,16 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertTrue(all("LLM-Impuls:" not in item.description for item in catalog.measures))
         self.assertTrue(all(not (item.evidence or {}).get("llm_impulse") for item in catalog.measures))
 
+
+    def test_trigger_items_include_question_text_labels(self) -> None:
+        evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2})
+        normalized = self.service._normalize_trigger_items("BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2})
+
+        self.assertTrue(normalized)
+        first_label = str(normalized[0].get("label") or "")
+        self.assertTrue(first_label)
+        self.assertNotEqual(first_label, normalized[0].get("item_id"))
+
     def test_evidence_extraction_range_and_size(self) -> None:
         evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})
         normalized = self.service._normalize_trigger_items("BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2, "DA_03": 3})

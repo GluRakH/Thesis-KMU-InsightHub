@@ -41,6 +41,29 @@ class RecommendationServiceTestCase(unittest.TestCase):
         now_items = [m for m in catalog.measures if (m.priority or {}).get("bucket") == "now"]
         self.assertGreaterEqual(len(now_items), 1)
 
+
+    def test_llm_text_enrichment_adds_impulse_to_description(self) -> None:
+        synthesis = Synthesis(
+            synthesis_id="syn-llm",
+            answer_set_id="as-llm",
+            bi_assessment_id="bi-llm",
+            pa_assessment_id="pa-llm",
+            recommendation="r",
+            priority_focus="Datenqualität zuerst",
+            context_restrictions=["begrenzte Ressourcen"],
+        )
+        catalog = self.service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label="L1",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 30.0, "BI_D3": 40.0},
+            pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 35.0, "PA_D3": 45.0},
+            use_llm_texts=True,
+            answers={"DA_01": 1, "DA_02": 2, "PA_01": 1, "PA_02": 2},
+        )
+        self.assertTrue(any("LLM-Impuls:" in item.description for item in catalog.measures))
+        self.assertTrue(any((item.evidence or {}).get("llm_impulse") for item in catalog.measures))
+
     def test_evidence_extraction_range_and_size(self) -> None:
         evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})
         normalized = self.service._normalize_trigger_items("BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2, "DA_03": 3})

@@ -16,8 +16,9 @@ def build_catalog_summary(focus: str, measures_by_bucket: dict[str, list[dict[st
                     "title": item.get("title"),
                     "deliverables": item.get("deliverables", [])[:3],
                     "kpi_summary": (
-                        f"{(item.get('kpi') or {}).get('name')} | Ziel {(item.get('kpi') or {}).get('target')} | "
-                        f"Messung {(item.get('kpi') or {}).get('measurement')}"
+                        f"{(item.get('kpi') or {}).get('name') or 'KPI nicht definiert'} | "
+                        f"Ziel {(item.get('kpi') or {}).get('target') or 'n/a'} | "
+                        f"Messung {(item.get('kpi') or {}).get('measurement') or 'n/a'}"
                     ),
                     "evidence_summary": item.get("rationale", ""),
                     "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in triggers],

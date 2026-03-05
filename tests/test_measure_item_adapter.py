@@ -32,6 +32,28 @@ class MeasureItemAdapterTestCase(unittest.TestCase):
         self.assertTrue(item["trigger_items"][0]["label"])
         self.assertIn("deficit", item["rationale"])
 
+    def test_adapter_creates_fallback_trigger_when_missing(self) -> None:
+        measure = Measure(
+            measure_id="m-2",
+            initiative_id="INIT-PA-GOV-01",
+            title="Maßnahme",
+            description="",
+            category=MeasureCategory.GOVERNANCE,
+            dimension="PA_D1",
+            priority_score=1.0,
+            suggested_priority=1,
+            deliverables=[],
+            kpi={},
+            evidence={"severity": 0.8, "trigger_items": []},
+        )
+        catalog = MeasureCatalog(catalog_id="c-2", title="t", status=CatalogStatus.DRAFT, measures=[measure])
+        payload = build_measures_by_bucket(catalog)
+
+        item = payload["now"][0]
+        self.assertEqual(len(item["trigger_items"]), 1)
+        self.assertTrue(item["trigger_items"][0]["item_id"].endswith("_FALLBACK"))
+        self.assertEqual(item["trigger_items"][0]["answer_value"], "aus Dimensionsscore abgeleitet")
+
 
 if __name__ == "__main__":
     unittest.main()

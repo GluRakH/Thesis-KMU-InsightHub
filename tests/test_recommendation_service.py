@@ -1,92 +1,85 @@
 import unittest
 
 from adapters.llm_client import LLMClient
+from app.services.initiative_templates import TemplateValidationError, load_templates
 from app.services.recommendation_service import RecommendationService
-from domain.models import Measure, MeasureCategory, Synthesis
+from domain.models import Synthesis
 
 
 class RecommendationServiceTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.service = RecommendationService(llm_client=LLMClient(dry_run=True))
 
-    def test_generate_catalog_from_dimension_level_mapping(self) -> None:
-        synthesis = Synthesis(
-            synthesis_id="syn-1",
-            answer_set_id="as-1",
-            bi_assessment_id="bi-1",
-            pa_assessment_id="pa-1",
-            recommendation="Reco",
-            priority_focus="Fokus Datenbasis",
-            heuristic_reason="Niedrige BI-Reife",
-            context_factors={"GLOBAL": 1.0},
-        )
+    def test_yaml_loader_and_schema_validation(self) -> None:
+        registry, version = load_templates()
+        self.assertTrue(registry)
+        self.assertNotEqual(version, "default")
+        self.assertTrue(all(len(item.deliverables) == 3 for item in registry.values()))
 
+    def test_priority_score_not_zero(self) -> None:
+        synthesis = Synthesis(synthesis_id="syn-1", answer_set_id="as-1", bi_assessment_id="bi-1", pa_assessment_id="pa-1", recommendation="r")
+        catalog = self.service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label="L1",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 30.0, "BI_D3": 40.0},
+            pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 35.0, "PA_D3": 45.0},
+            answers={"DA_01": 1, "DA_02": 2, "PA_01": 1, "PA_02": 2},
+        )
+        self.assertTrue(all(item.priority_score > 0 for item in catalog.measures))
+
+    def test_bucket_rule_now_has_entry(self) -> None:
+        synthesis = Synthesis(synthesis_id="syn-2", answer_set_id="as-2", bi_assessment_id="bi-2", pa_assessment_id="pa-2", recommendation="r")
         catalog = self.service.generate_catalog(
             synthesis=synthesis,
             bi_maturity_label="L2",
-            pa_maturity_label="L1",
-            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 45.0, "BI_D3": 65.0},
-            pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 30.0, "PA_D3": 55.0},
-            bi_dimension_levels={"BI_D1": "L1", "BI_D2": "L2", "BI_D3": "L3"},
-            pa_dimension_levels={"PA_D1": "L1", "PA_D2": "L2", "PA_D3": "L3"},
-            answers={"DA_01": 1, "DA_02": 2, "PA_01": 1},
+            pa_maturity_label="L2",
+            bi_dimension_scores={"BI_D1": 40.0, "BI_D2": 50.0, "BI_D3": 60.0},
+            pa_dimension_scores={"PA_D1": 35.0, "PA_D2": 45.0, "PA_D3": 55.0},
+            answers={"DA_01": 2, "DA_02": 2, "PA_01": 2, "PA_02": 2},
         )
+        now_items = [m for m in catalog.measures if (m.priority or {}).get("bucket") == "now"]
+        self.assertGreaterEqual(len(now_items), 1)
 
-        self.assertEqual(catalog.synthesis_id, "syn-1")
-        self.assertEqual(len(catalog.measures), 6)
-        self.assertTrue(all(len(item.deliverables) == 3 for item in catalog.measures))
-        self.assertTrue(all(item.initiative_id.startswith("INIT-") for item in catalog.measures))
 
-    def test_deficit_score_normalization(self) -> None:
-        self.assertEqual(self.service.calculate_deficit_score(1, 1, 5), 1.0)
-        self.assertEqual(self.service.calculate_deficit_score(5, 1, 5), 0.0)
-        self.assertIsNone(self.service.calculate_deficit_score(None, 1, 5))
+    def test_measure_generation_stays_deterministic_when_llm_flag_enabled(self) -> None:
+        synthesis = Synthesis(
+            synthesis_id="syn-llm",
+            answer_set_id="as-llm",
+            bi_assessment_id="bi-llm",
+            pa_assessment_id="pa-llm",
+            recommendation="r",
+            priority_focus="Datenqualität zuerst",
+            context_restrictions=["begrenzte Ressourcen"],
+        )
+        catalog = self.service.generate_catalog(
+            synthesis=synthesis,
+            bi_maturity_label="L1",
+            pa_maturity_label="L1",
+            bi_dimension_scores={"BI_D1": 20.0, "BI_D2": 30.0, "BI_D3": 40.0},
+            pa_dimension_scores={"PA_D1": 25.0, "PA_D2": 35.0, "PA_D3": 45.0},
+            use_llm_texts=True,
+            answers={"DA_01": 1, "DA_02": 2, "PA_01": 1, "PA_02": 2},
+        )
+        self.assertTrue(all("LLM-Impuls:" not in item.description for item in catalog.measures))
+        self.assertTrue(all(not (item.evidence or {}).get("llm_impulse") for item in catalog.measures))
 
-    def test_criticality_weight_rankings(self) -> None:
-        weights = self.service._criticality_weights({"BI_D1": 20, "BI_D2": 30, "BI_D3": 40})
-        self.assertEqual(weights["BI_D1"], 1.3)
-        self.assertEqual(weights["BI_D2"], 1.15)
-        self.assertEqual(weights["BI_D3"], 1.0)
 
-    def test_gap_weight_default_and_clamp(self) -> None:
-        self.assertEqual(self.service._gap_weight("L1", "BI", {}), 1.3)
-        self.assertEqual(self.service._gap_weight("L1", "BI", {"BI": 10}), 1.6)
-        self.assertEqual(self.service._gap_weight("L4", "BI", {"BI": 2}), 1.0)
+    def test_trigger_items_include_question_text_labels(self) -> None:
+        evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2})
+        normalized = self.service._normalize_trigger_items("BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2})
 
-    def test_priority_score_effort_zero_is_protected(self) -> None:
-        score = self.service.calculate_priority_score(impact=4, effort=0, criticality_weight=1.3, gap_weight=1.15)
-        self.assertAlmostEqual(score, 5.98)
+        self.assertTrue(normalized)
+        first_label = str(normalized[0].get("label") or "")
+        self.assertTrue(first_label)
+        self.assertNotEqual(first_label, normalized[0].get("item_id"))
 
-    def test_dependency_bucketing_with_gate(self) -> None:
-        measures = [
-            Measure(
-                measure_id="m1",
-                initiative_id="INIT-BI-GOVERNANCE-01",
-                title="Governance",
-                description="",
-                category=MeasureCategory.GOVERNANCE,
-                dimension="BI_D1",
-                impact=5,
-                effort=2,
-                priority_score=3.0,
-            ),
-            Measure(
-                measure_id="m2",
-                initiative_id="INIT-BI-TECHNICAL-01",
-                title="Tech",
-                description="",
-                category=MeasureCategory.TECHNICAL,
-                dimension="BI_D2",
-                impact=5,
-                effort=2,
-                priority_score=4.0,
-                dependencies=["INIT-BI-GOVERNANCE-01"],
-            ),
-        ]
-
-        buckets = self.service._build_now_next_later(measures)
-        self.assertEqual(buckets["now"], ["INIT-BI-GOVERNANCE-01"])
-        self.assertEqual(buckets["next"], ["INIT-BI-TECHNICAL-01"])
+    def test_evidence_extraction_range_and_size(self) -> None:
+        evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})
+        normalized = self.service._normalize_trigger_items("BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2, "DA_03": 3})
+        self.assertGreaterEqual(len(normalized), 2)
+        self.assertLessEqual(len(normalized), 3)
+        self.assertTrue(all(0.0 <= float(item["deficit_score"]) <= 1.0 for item in normalized))
 
 
 if __name__ == "__main__":

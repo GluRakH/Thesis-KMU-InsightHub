@@ -112,6 +112,103 @@ class LLMClient:
 
         return [line.strip("- •\t ") for line in content.splitlines() if line.strip()][:max_measures]
 
+    def summarize_measure_catalog(
+        self,
+        focus: str,
+        measures_by_bucket: dict[str, list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        payload = {
+            "focus": focus,
+            "measures_by_bucket": measures_by_bucket,
+        }
+        prompt = (
+            "Fasse den Maßnahmenkatalog auf Deutsch, übersichtlich und verständlich zusammen. "
+            "Die Punkte in now/next/later sollen kurz, aber mit konkretem Nutzen formuliert sein. "
+            "Ergänze zusätzlich pro Maßnahme vollständige Details. "
+            "Gib nur JSON zurück mit den Feldern "
+            "'headline', 'executive_summary', 'now', 'next', 'later', 'risks_and_dependencies', 'first_30_days', "
+            "'measure_details'. "
+            "'measure_details' muss ein Objekt mit den Buckets now/next/later sein; "
+            "jede Liste enthält für jede Maßnahme ein Objekt mit 'title', 'deliverables' (Liste), "
+            "'kpi_summary', 'evidence_summary' und 'trigger_refs' (Liste kurzer Trigger-Referenzen)."
+        )
+        content = self._run_text_task(
+            "summarize_measure_catalog",
+            prompt,
+            payload,
+            output_key="catalog_summary",
+            retries=2,
+        )
+
+        try:
+            parsed = json.loads(content) if isinstance(content, str) else content
+        except json.JSONDecodeError:
+            parsed = {}
+
+        if not isinstance(parsed, dict):
+            parsed = {}
+
+        return {
+            "headline": str(parsed.get("headline") or "Ergebnis Maßnahmenkatalog"),
+            "executive_summary": str(parsed.get("executive_summary") or "Keine Zusammenfassung verfügbar."),
+            "now": [str(item) for item in parsed.get("now", [])][:3],
+            "next": [str(item) for item in parsed.get("next", [])][:3],
+            "later": [str(item) for item in parsed.get("later", [])][:3],
+            "risks_and_dependencies": [str(item) for item in parsed.get("risks_and_dependencies", [])][:4],
+            "first_30_days": [str(item) for item in parsed.get("first_30_days", [])][:4],
+            "measure_details": self._normalize_measure_details(parsed.get("measure_details")),
+        }
+
+    @staticmethod
+    def _normalize_measure_details(raw: Any) -> dict[str, list[dict[str, Any]]]:
+        default = {"now": [], "next": [], "later": []}
+        if not isinstance(raw, dict):
+            return default
+
+        normalized: dict[str, list[dict[str, Any]]] = {}
+        for bucket in ("now", "next", "later"):
+            entries = raw.get(bucket, [])
+            if not isinstance(entries, list):
+                normalized[bucket] = []
+                continue
+
+            bucket_items: list[dict[str, Any]] = []
+            for item in entries:
+                if not isinstance(item, dict):
+                    continue
+                title = str(item.get("title") or "").strip()
+                raw_deliverables = item.get("deliverables", [])
+                deliverables = (
+                    [str(entry).strip() for entry in raw_deliverables if str(entry).strip()]
+                    if isinstance(raw_deliverables, list)
+                    else []
+                )
+                if not deliverables:
+                    deliverables_summary = str(item.get("deliverables_summary") or "").strip()
+                    if deliverables_summary:
+                        deliverables = [deliverables_summary]
+                kpi_summary = str(item.get("kpi_summary") or "").strip()
+                evidence_summary = str(item.get("evidence_summary") or "").strip()
+                raw_trigger_refs = item.get("trigger_refs", [])
+                trigger_refs = (
+                    [str(entry).strip() for entry in raw_trigger_refs if str(entry).strip()]
+                    if isinstance(raw_trigger_refs, list)
+                    else []
+                )
+                if title or deliverables or kpi_summary or evidence_summary or trigger_refs:
+                    bucket_items.append(
+                        {
+                            "title": title,
+                            "deliverables": deliverables,
+                            "kpi_summary": kpi_summary,
+                            "evidence_summary": evidence_summary,
+                            "trigger_refs": trigger_refs,
+                        }
+                    )
+            normalized[bucket] = bucket_items
+
+        return normalized
+
     def check_connection(self) -> dict[str, Any]:
         if self.dry_run:
             return {
@@ -144,7 +241,14 @@ class LLMClient:
                 "message": f"Ollama-Verbindung fehlgeschlagen: {type(exc).__name__}: {exc}",
             }
 
-    def _run_text_task(self, task_name: str, prompt: str, payload: dict[str, Any], output_key: str) -> str:
+    def _run_text_task(
+        self,
+        task_name: str,
+        prompt: str,
+        payload: dict[str, Any],
+        output_key: str,
+        retries: int = 0,
+    ) -> str:
         input_hash = self._hash_payload(payload)
         timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -159,27 +263,31 @@ class LLMClient:
             )
             return output
 
-        try:
-            output = self._call_api(prompt, payload, output_key)
-            self._write_trace(
-                task_name=task_name,
-                timestamp=timestamp,
-                input_hash=input_hash,
-                mode="api",
-                output_preview=output,
-            )
-            return output
-        except Exception as exc:
-            output = self._dummy_response(task_name, payload)
-            self._write_trace(
-                task_name=task_name,
-                timestamp=timestamp,
-                input_hash=input_hash,
-                mode="fallback",
-                output_preview=output,
-                error=f"{type(exc).__name__}: {exc}",
-            )
-            return output
+        last_error: Exception | None = None
+        for _ in range(retries + 1):
+            try:
+                output = self._call_api(prompt, payload, output_key)
+                self._write_trace(
+                    task_name=task_name,
+                    timestamp=timestamp,
+                    input_hash=input_hash,
+                    mode="api",
+                    output_preview=output,
+                )
+                return output
+            except Exception as exc:
+                last_error = exc
+
+        output = self._dummy_response(task_name, payload)
+        self._write_trace(
+            task_name=task_name,
+            timestamp=timestamp,
+            input_hash=input_hash,
+            mode="fallback",
+            output_preview=output,
+            error=f"{type(last_error).__name__}: {last_error}",
+        )
+        return output
 
     def _call_api(self, prompt: str, payload: dict[str, Any], output_key: str) -> str:
         headers = {"Content-Type": "application/json"}
@@ -262,13 +370,13 @@ class LLMClient:
     def _dummy_response(task_name: str, payload: dict[str, Any]) -> str:
         if task_name == "summarize_use_case":
             return (
-                "[Dummy] Das Unternehmen möchte BI und Predictive Analytics strukturiert ausbauen. "
+                "Das Unternehmen möchte BI und Predictive Analytics strukturiert ausbauen. "
                 "Die bisherigen Befunde zeigen Handlungsbedarf bei Datenqualität, Prozessen und Kompetenzen. "
                 "Durch gezielte Maßnahmen wird eine stabilere Entscheidungsgrundlage und höherer Geschäftsnutzen erwartet."
             )
         if task_name == "generate_assessment_rationale":
             return (
-                f"[Dummy] Die Bewertung ergibt sich aus dem Zusammenspiel der Dimensionswerte. "
+                f"Die Bewertung ergibt sich aus dem Zusammenspiel der Dimensionswerte. "
                 f"Der ermittelte Reifegrad ist konsistent mit den dokumentierten Findings ({payload.get('assessment_type', 'Assessment')})."
             )
         if task_name == "draft_measures":
@@ -280,4 +388,47 @@ class LLMClient:
                 "Priorität 3: Monatliches Review mit Fachbereich und IT etablieren.",
             ]
             return json.dumps({"measures": measures}, ensure_ascii=False)
-        return "[Dummy] Kein Ergebnis verfügbar."
+        if task_name == "summarize_measure_catalog":
+            return json.dumps(LLMClient._build_catalog_summary_fallback(payload), ensure_ascii=False)
+        return "Kein Ergebnis verfügbar."
+
+    @staticmethod
+    def _build_catalog_summary_fallback(payload: dict[str, Any]) -> dict[str, Any]:
+        measures_by_bucket = payload.get("measures_by_bucket", {}) if isinstance(payload, dict) else {}
+
+        def _short_item(item: dict[str, Any]) -> str:
+            title = str(item.get("title") or "Maßnahme").strip()
+            trigger = ""
+            refs = item.get("trigger_refs")
+            if isinstance(refs, list) and refs:
+                trigger = f" (Trigger: {refs[0]})"
+            return f"{title}{trigger}"
+
+        details: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
+        for bucket in ("now", "next", "later"):
+            for item in measures_by_bucket.get(bucket, []):
+                if not isinstance(item, dict):
+                    continue
+                details[bucket].append(
+                    {
+                        "title": str(item.get("title") or "Maßnahme"),
+                        "deliverables": [str(entry) for entry in item.get("deliverables", []) if str(entry).strip()][:3],
+                        "kpi_summary": str(item.get("kpi_summary") or "KPI aus Template übernehmen und baseline messen."),
+                        "evidence_summary": str(item.get("evidence_summary") or "Ableitung basiert auf Defiziten im Fragenkatalog."),
+                        "trigger_refs": [str(entry) for entry in item.get("trigger_refs", []) if str(entry).strip()][:3],
+                    }
+                )
+
+        return {
+            "headline": "Ergebnis Maßnahmenkatalog",
+            "executive_summary": f"Fokus: {payload.get('focus') or 'aus Scores abgeleitet'}. Die Beschreibung wurde aus den konkreten Maßnahmen, Triggern und KPI-Vorgaben erzeugt.",
+            "now": [_short_item(item) for item in measures_by_bucket.get("now", [])][:4],
+            "next": [_short_item(item) for item in measures_by_bucket.get("next", [])][:4],
+            "later": [_short_item(item) for item in measures_by_bucket.get("later", [])][:4],
+            "risks_and_dependencies": ["Abhängigkeiten aus der Sequenzierung prüfen und vor Umsetzung im Steering bestätigen."],
+            "first_30_days": [
+                "Owner je Top-Maßnahme benennen und Arbeitspakete terminieren.",
+                "Für jede Maßnahme KPI-Baseline und Zielwert im Reporting erfassen.",
+            ],
+            "measure_details": details,
+        }

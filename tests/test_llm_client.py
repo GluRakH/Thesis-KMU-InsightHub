@@ -30,7 +30,7 @@ class LLMClientTestCase(unittest.TestCase):
 
             summary = client.summarize_use_case("Kontext", {"D1": "ok"}, {"D2": "ok"})
 
-            self.assertIn("[Dummy]", summary)
+            self.assertNotIn("[Dummy]", summary)
             self.assertTrue(trace_file.exists())
             trace = json.loads(trace_file.read_text(encoding="utf-8").strip())
             self.assertEqual(trace["task"], "summarize_use_case")
@@ -49,6 +49,55 @@ class LLMClientTestCase(unittest.TestCase):
             self.assertEqual(len(measures), 2)
             self.assertTrue(all(isinstance(item, str) for item in measures))
 
+
+    def test_summarize_measure_catalog_returns_structured_payload(self) -> None:
+        client = LLMClient(dry_run=True)
+
+        summary = client.summarize_measure_catalog(
+            focus="Governance",
+            measures_by_bucket={"now": [{"title": "M1"}], "next": [], "later": []},
+        )
+
+        self.assertEqual(summary["headline"], "Ergebnis Maßnahmenkatalog")
+        self.assertTrue(summary["now"])
+        self.assertIn("measure_details", summary)
+        self.assertIn("now", summary["measure_details"])
+        first_detail = summary["measure_details"]["now"][0]
+        self.assertIsInstance(first_detail.get("deliverables"), list)
+        self.assertIn("kpi_summary", first_detail)
+
+
+    def test_catalog_fallback_uses_payload_specific_details(self) -> None:
+        client = LLMClient(dry_run=True)
+
+        summary = client.summarize_measure_catalog(
+            focus="Governance",
+            measures_by_bucket={
+                "now": [
+                    {
+                        "title": "Data Ownership klären",
+                        "deliverables": ["RACI verabschiedet"],
+                        "kpi_summary": "Owner-Abdeckung >= 90%",
+                        "evidence_summary": "Aus DA_01 abgeleitet",
+                        "trigger_refs": ["DA_01: Ownership unklar"],
+                    }
+                ],
+                "next": [],
+                "later": [
+                    {
+                        "title": "Forecasting industrialisieren",
+                        "deliverables": ["MLOps Standard"],
+                        "kpi_summary": "Lead Time -20%",
+                        "evidence_summary": "Aus PA_07 abgeleitet",
+                        "trigger_refs": ["PA_07: geringe Modellstabilität"],
+                    }
+                ],
+            },
+        )
+
+        self.assertIn("Data Ownership klären", summary["now"][0])
+        self.assertIn("Forecasting industrialisieren", summary["later"][0])
+        self.assertEqual(summary["measure_details"]["later"][0]["deliverables"], ["MLOps Standard"])
 
     def test_check_connection_in_dry_run_mode(self) -> None:
         client = LLMClient(dry_run=True)

@@ -1,81 +1,47 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from domain.models import MeasureCatalog
 
 
-def _build_v11_payload(pipeline: dict[str, Any], answers: dict[str, Any], catalog: MeasureCatalog | None, timestamp: str) -> dict[str, Any]:
-    assessments = {
-        "BI": pipeline.get("bi", {}),
-        "PA": pipeline.get("pa", {}),
-    }
-
-    evidence_overview: dict[str, dict[str, Any]] = {}
-    for domain, assessment in assessments.items():
-        dimension_scores = assessment.get("dimension_scores", {})
-        critical_dimension = min(dimension_scores.items(), key=lambda item: item[1])[0] if dimension_scores else "N/A"
-        top_items: list[dict[str, Any]] = []
-        if catalog:
-            for measure in catalog.measures:
-                if measure.dimension == critical_dimension:
-                    top_items = list(measure.evidence.get("trigger_items", []))[:3]
-                    break
-
-        evidence_overview[domain] = {
-            "critical_dimension": critical_dimension,
-            "top_items": top_items,
-        }
-
-    recommendations = {"now": [], "next": [], "later": []}
-    if catalog:
-        sorted_measures = sorted(catalog.measures, key=lambda item: item.suggested_priority)
-        for index, measure in enumerate(sorted_measures, start=1):
-            priority = dict(measure.priority or {})
-            priority.setdefault("impact", float(measure.impact))
-            priority.setdefault("effort", float(measure.effort))
-            priority.setdefault("criticality_weight", 1.0)
-            priority.setdefault("gap_weight", 1.0)
-            score = measure.priority_score or (
-                (priority["impact"] / max(1.0, priority["effort"]))
-                * priority["criticality_weight"]
-                * priority["gap_weight"]
-            )
-            priority["score"] = round(float(score), 4)
-            if not priority.get("bucket"):
-                priority["bucket"] = "now" if index <= 2 else "next" if index <= 4 else "later"
-
-            kpi = dict(measure.kpi or {})
-            kpi.setdefault("name", f"Fortschritt {measure.dimension or 'N/A'}")
-            kpi.setdefault("target", "Mindestwert >= aktueller Baseline")
-            kpi.setdefault("measurement", "Monatlicher Mittelwert der Dimensions-Items (0-100)")
-            goal = measure.goal or f"Erreiche in {measure.dimension or 'N/A'} den nächsten stabilen Reifezustand durch '{measure.title or 'Maßnahme'}'."
-
-            payload = {
-                "id": measure.initiative_id or measure.measure_id or "N/A",
-                "title": measure.title or "Ohne Titel",
-                "goal": goal,
-                "priority": priority,
-                "dependencies": measure.dependencies,
-                "kpi": kpi,
-                "trigger_items": measure.evidence.get("trigger_items", []),
-            }
-            bucket = str(priority.get("bucket", "later")).lower()
-            recommendations[bucket if bucket in recommendations else "later"].append(payload)
-
+def _initiative_payload(measure: Any) -> dict[str, Any]:
+    kpi = dict(measure.kpi or {})
+    evidence = dict(measure.evidence or {})
+    triggers = list(evidence.get("trigger_items", []))[:3]
     return {
-        "export_version": "1.1.0",
-        "timestamp": timestamp,
-        "summary": {
-            "bi": pipeline.get("bi", {}),
-            "pa": pipeline.get("pa", {}),
-            "synthesis": pipeline.get("synthesis", {}),
+        "id": measure.initiative_id or measure.measure_id,
+        "title": measure.title,
+        "dimension": measure.dimension,
+        "category": measure.category.value,
+        "bucket": str((measure.priority or {}).get("bucket", "later")),
+        "priority_score": float(measure.priority_score),
+        "rank": int(measure.suggested_priority),
+        "sequence_reason": str((measure.priority or {}).get("sequence_reason", "")),
+        "diagnosis": measure.description,
+        "goal": measure.goal,
+        "deliverables": list(measure.deliverables)[:3],
+        "dependencies": list(measure.dependencies),
+        "template_id": measure.measure_class,
+        "template_version": measure.prompt_version,
+        "kpi": {
+            "name": str(kpi.get("name", "")),
+            "target": str(kpi.get("target", "")),
+            "measurement": str(kpi.get("measurement", "")),
+            "frequency": str(kpi.get("frequency", "")),
+            "source_system": str(kpi.get("source_system", "")),
+            "owner_role": str(kpi.get("owner_role", "")),
         },
-        "evidence_overview": evidence_overview,
-        "recommendations": recommendations,
-        "answers": answers,
+        "evidence": {
+            "dimension_id": evidence.get("dimension_id", measure.dimension),
+            "severity": float(evidence.get("severity", 0.0)),
+            "trigger_items": triggers,
+            "rationale": str(evidence.get("rationale", "")),
+        },
     }
 
 
@@ -83,163 +49,114 @@ def build_export_payload(
     pipeline: dict[str, Any],
     answers: dict[str, Any],
     catalog: MeasureCatalog | None,
-    export_version: str = "1.0.0",
+    export_version: str = "2.0.0",
+    catalog_summary: dict[str, Any] | None = None,
+    rules_applied: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     timestamp = datetime.now(timezone.utc).isoformat()
-    if export_version == "1.0.0":
-        return {
-            "export_version": "1.0.0",
-            "timestamp": timestamp,
-            "pipeline": pipeline,
-            "answers": answers,
-            "catalog": catalog.model_dump() if catalog else None,
-        }
-    if export_version == "1.1.0":
-        return _build_v11_payload(pipeline, answers, catalog, timestamp)
+    initiatives = [_initiative_payload(measure) for measure in (catalog.measures if catalog else [])]
+    grouped = {"now": [], "next": [], "later": []}
+    for initiative in initiatives:
+        grouped[initiative["bucket"] if initiative["bucket"] in grouped else "later"].append(initiative)
 
-    evidence_overview: dict[str, dict[str, Any]] = {}
-    for domain, key in (("BI", "bi"), ("PA", "pa")):
-        assessment = pipeline.get(key, {})
-        top_items = list(assessment.get("critical_dimension_top_items", []))[:3]
-        evidence_overview[domain] = {
-            "critical_dimension": assessment.get("critical_dimension_id", "N/A"),
-            "critical_dimension_severity": round(float(assessment.get("critical_dimension_severity", 0.0)), 4),
-            "top_items": top_items,
-        }
+    thresholds = (rules_applied or {}).get("thresholds", {"governance": 0.6, "data_quality": 0.55})
+    template_version = catalog.prompt_version if catalog else "templates-default"
 
-    recommendations = {"now": [], "next": [], "later": []}
-    if catalog:
-        for measure in sorted(catalog.measures, key=lambda m: (-float(m.priority_score), m.initiative_id)):
-            priority = dict(measure.priority or {})
-            score = float(measure.priority_score or priority.get("score", 0.0))
-            bucket = str(priority.get("bucket", "later")).lower()
-            if bucket not in recommendations:
-                bucket = "later"
-            recommendations[bucket].append(
-                {
-                    "id": measure.initiative_id or measure.measure_id,
-                    "title": measure.title,
-                    "dimension": measure.dimension,
-                    "category": measure.category.value,
-                    "priority_score": round(score, 2),
-                    "diagnosis": measure.description,
-                    "goal": measure.goal,
-                    "deliverables": (measure.deliverables or [])[:3],
-                    "dependencies": measure.dependencies,
-                    "kpi": measure.kpi,
-                }
-            )
-
-    return {
-        "export_version": "1.2.0",
+    payload = {
+        "export_version": export_version,
         "timestamp": timestamp,
-        "summary": {
+        "assessment": {
             "bi": pipeline.get("bi", {}),
             "pa": pipeline.get("pa", {}),
             "synthesis": pipeline.get("synthesis", {}),
+            "scores": {
+                "bi_score": float(pipeline.get("bi", {}).get("score", 0.0)),
+                "pa_score": float(pipeline.get("pa", {}).get("score", 0.0)),
+            },
         },
-        "evidence_overview": evidence_overview,
-        "recommendations": recommendations,
+        "initiatives": grouped,
+        "rules_applied": {
+            "gates": (rules_applied or {}).get("gates", []),
+            "thresholds": thresholds,
+            "dependencies": (rules_applied or {}).get("dependencies", []),
+        },
+        "generation_metadata": {
+            "template_version": template_version,
+            "llm_model": "none",
+            "prompt_version": catalog.prompt_version if catalog else "n/a",
+            "temperature": 0.0,
+            "mode": "deterministic",
+        },
+        "catalog_summary": catalog_summary or {},
         "answers": answers,
     }
+    payload["run_id"] = persist_run(payload, answerset_id=str(pipeline.get("synthesis", {}).get("answer_set_id", "unknown")))
+    return payload
+
+
+def persist_run(payload: dict[str, Any], answerset_id: str) -> str:
+    run_id = f"run-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    run_dir = Path("runs")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    config_hash = hashlib.sha256(
+        json.dumps(
+            {
+                "template_version": payload.get("generation_metadata", {}).get("template_version"),
+                "thresholds": payload.get("rules_applied", {}).get("thresholds", {}),
+            },
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    record = {
+        "run_id": run_id,
+        "answer_set_id": answerset_id,
+        "timestamp": payload.get("timestamp"),
+        "configuration_hash": config_hash,
+        "result": payload,
+    }
+    (run_dir / f"{run_id}.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    return run_id
 
 
 def payload_to_markdown(payload: dict[str, Any]) -> str:
-    if payload.get("export_version") == "1.0.0":
-        pipeline = payload["pipeline"]
-        answers = payload["answers"]
-        catalog = payload.get("catalog")
-        lines = [
-            "# InsightHub Export",
-            f"- Export Version: {payload['export_version']}",
-            f"- Timestamp: {payload['timestamp']}",
-            "",
-            "## Assessments",
-            f"- BI: {pipeline['bi']['summary']}",
-            f"- PA: {pipeline['pa']['summary']}",
-            "",
-            "## Synthese",
-            pipeline["synthesis"]["combined_summary"],
-            "",
-            "## Empfehlung",
-            pipeline["synthesis"]["recommendation"],
-            "",
-            "## Antworten",
-        ]
-        for question_id, value in answers.items():
-            lines.append(f"- {question_id}: {value}")
-
-        if catalog is not None:
-            lines.extend(["", "## Maßnahmenkatalog"])
-            for measure in catalog["measures"]:
-                lines.append(
-                    f"- ({measure['suggested_priority']}) {measure['title']} | Kategorie: {measure['category']} | "
-                    f"Impact {measure['impact']}/5 | Effort {measure['effort']}/5"
-                )
-        return "\n".join(lines)
-
-    if payload.get("export_version") == "1.1.0":
-        lines = [
-            "# InsightHub Export",
-            f"- Export Version: {payload['export_version']}",
-            f"- Timestamp: {payload['timestamp']}",
-            "",
-            "## Evidenzüberblick",
-        ]
-        for domain, evidence in payload.get("evidence_overview", {}).items():
-            lines.append(f"### {domain}")
-            lines.append(f"- Kritischste Dimension: {evidence.get('critical_dimension', 'N/A')}")
-            for item in evidence.get("top_items", []):
-                lines.append(f"  - {item.get('item_id')}: answer={item.get('answer')} deficit={item.get('deficit_score')}")
-
-        lines.append("\n## Maßnahmen")
-        for bucket in ("now", "next", "later"):
-            lines.append(f"### {bucket.upper()}")
-            for measure in payload.get("recommendations", {}).get(bucket, []):
-                priority = measure.get("priority", {})
-                lines.append(
-                    f"- {measure['id']} | {measure['title']} | Ziel: {measure.get('goal')} | "
-                    f"PriorityScore={priority.get('score')} (I={priority.get('impact')}, E={priority.get('effort')}, "
-                    f"CW={priority.get('criticality_weight')}, GW={priority.get('gap_weight')})"
-                )
-                lines.append(f"  - Dependencies: {', '.join(measure.get('dependencies', [])) or 'Keine'}")
-                kpi = measure.get("kpi", {})
-                lines.append(f"  - KPI: {kpi.get('name')} | Target: {kpi.get('target')} | Messung: {kpi.get('measurement')}")
-                for trigger in measure.get("trigger_items", [])[:3]:
-                    lines.append(f"  - Trigger: {trigger.get('item_id')} ({trigger.get('answer')}) deficit={trigger.get('deficit_score')}")
-        return "\n".join(lines)
-
     lines = [
         "# InsightHub Export",
         f"- Export Version: {payload['export_version']}",
+        f"- Run-ID: {payload.get('run_id', 'n/a')}",
         f"- Timestamp: {payload['timestamp']}",
         "",
-        "## Evidenzüberblick",
+        "## Assessment",
+        f"- BI-Score: {payload['assessment']['scores']['bi_score']:.2f} ({payload['assessment']['bi'].get('level_label', 'N/A')})",
+        f"- PA-Score: {payload['assessment']['scores']['pa_score']:.2f} ({payload['assessment']['pa'].get('level_label', 'N/A')})",
+        "",
+        "## Maßnahmenkatalog (deterministisch)",
     ]
-    for domain, evidence in payload.get("evidence_overview", {}).items():
-        lines.append(f"### {domain}")
-        lines.append(
-            f"- Kritischste Dimension: {evidence.get('critical_dimension', 'N/A')} | Severity: {evidence.get('critical_dimension_severity', 0.0):.2f}"
-        )
-        triggers = [
-            f"{item.get('item_id')}={item.get('answer')} ({float(item.get('deficit_score', 0.0)):.2f})"
-            for item in evidence.get("top_items", [])[:3]
-        ]
-        lines.append(f"- Top-Trigger-Items: {', '.join(triggers) if triggers else 'keine'}")
+    for bucket, label in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
+        lines.append(f"### {label}")
+        measures = payload.get("initiatives", {}).get(bucket, [])
+        if not measures:
+            lines.append("- Keine Maßnahmen in diesem Bucket.")
+            continue
+        for measure in measures:
+            lines.append(f"- {measure['id']} | {measure['title']} | PriorityScore={measure['priority_score']:.2f} | Rang={measure['rank']}")
+            lines.append(f"  - Sequenz: {measure.get('sequence_reason', '')}")
+            lines.append(f"  - Lieferobjekte: {', '.join(measure.get('deliverables', []))}")
+            lines.append(f"  - KPI: {measure['kpi'].get('name')} | Ziel: {measure['kpi'].get('target')} | Messung: {measure['kpi'].get('measurement')}")
+            evidence = measure.get("evidence", {})
+            lines.append(f"  - Evidenz: Dimension {evidence.get('dimension_id')} | Severity {float(evidence.get('severity', 0.0)):.2f}")
+            for trigger in evidence.get("trigger_items", []):
+                lines.append(f"    - Evidenz-Trigger: {trigger.get('item_id')} ({trigger.get('answer')}) deficit={trigger.get('deficit_score')}")
 
-    lines.append("\n## Maßnahmen")
-    for bucket in ("now", "next", "later"):
-        lines.append(f"### {bucket.upper()}")
-        for measure in payload.get("recommendations", {}).get(bucket, []):
+    lines.append("\n## Risiken & Abhängigkeiten")
+    gates = payload.get("rules_applied", {}).get("gates", [])
+    if gates:
+        for gate in gates:
             lines.append(
-                f"- {measure['id']} | {measure['title']} | {measure.get('dimension')} | {measure.get('category')} | PriorityScore={measure.get('priority_score'):.2f}"
+                f"- {gate.get('rule')} aktiv: Blocker {gate.get('blocking_measure')} -> {', '.join(gate.get('affected_measures', [])) or 'keine'}"
             )
-            lines.append(f"  - Diagnose: {measure.get('diagnosis')}")
-            for deliverable in measure.get("deliverables", [])[:3]:
-                lines.append(f"  - Deliverable: {deliverable}")
-            lines.append(f"  - Dependencies: {', '.join(measure.get('dependencies', [])) or 'keine'}")
-            kpi = measure.get("kpi", {})
-            lines.append(f"  - KPI: {kpi.get('name')} | Ziel: {kpi.get('target')} | Messung: {kpi.get('measurement')}")
+    else:
+        lines.append("- Keine aktivierten Gates.")
     return "\n".join(lines)
 
 

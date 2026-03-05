@@ -199,8 +199,10 @@ class ExportServiceTestCase(unittest.TestCase):
                 "now": [
                     {
                         "title": "Governance aufsetzen",
-                        "deliverables_summary": "RACI und Rollenhandbuch",
+                        "deliverables": ["RACI", "Rollenhandbuch", "Board-Rhythmus"],
                         "kpi_summary": "Owner-Abdeckung >= 90%",
+                        "evidence_summary": "Abgeleitet aus niedriger BI_D1-Reife.",
+                        "trigger_refs": ["DA_01: Owner fehlen"],
                     }
                 ],
                 "next": [],
@@ -214,8 +216,9 @@ class ExportServiceTestCase(unittest.TestCase):
         self.assertEqual(payload["catalog_summary"]["headline"], "Ergebnis Maßnahmenkatalog")
         self.assertIn("## Ergebnis Maßnahmenkatalog (LLM)", markdown)
         self.assertIn("Kernteam benennen", markdown)
-        self.assertIn("Maßnahmen-Details (Deliverables & KPI)", markdown)
+        self.assertIn("Maßnahmen-Details (vollständig inkl. Evidenz-Trigger)", markdown)
         self.assertIn("Owner-Abdeckung >= 90%", markdown)
+        self.assertIn("Trigger-Referenz: DA_01: Owner fehlen", markdown)
 
     def test_payload_to_json_serializes_date_and_datetime(self) -> None:
         payload = {

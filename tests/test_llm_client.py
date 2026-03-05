@@ -30,7 +30,7 @@ class LLMClientTestCase(unittest.TestCase):
 
             summary = client.summarize_use_case("Kontext", {"D1": "ok"}, {"D2": "ok"})
 
-            self.assertIn("[Dummy]", summary)
+            self.assertNotIn("[Dummy]", summary)
             self.assertTrue(trace_file.exists())
             trace = json.loads(trace_file.read_text(encoding="utf-8").strip())
             self.assertEqual(trace["task"], "summarize_use_case")
@@ -62,6 +62,9 @@ class LLMClientTestCase(unittest.TestCase):
         self.assertTrue(summary["now"])
         self.assertIn("measure_details", summary)
         self.assertIn("now", summary["measure_details"])
+        first_detail = summary["measure_details"]["now"][0]
+        self.assertIsInstance(first_detail.get("deliverables"), list)
+        self.assertIn("kpi_summary", first_detail)
 
     def test_check_connection_in_dry_run_mode(self) -> None:
         client = LLMClient(dry_run=True)

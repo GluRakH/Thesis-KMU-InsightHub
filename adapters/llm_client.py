@@ -124,12 +124,13 @@ class LLMClient:
         prompt = (
             "Fasse den Maßnahmenkatalog auf Deutsch, übersichtlich und verständlich zusammen. "
             "Die Punkte in now/next/later sollen kurz, aber mit konkretem Nutzen formuliert sein. "
-            "Ergänze zusätzlich pro Bucket eine knappe Anreicherung zu Deliverables und KPI. "
+            "Ergänze zusätzlich pro Maßnahme vollständige Details. "
             "Gib nur JSON zurück mit den Feldern "
             "'headline', 'executive_summary', 'now', 'next', 'later', 'risks_and_dependencies', 'first_30_days', "
             "'measure_details'. "
             "'measure_details' muss ein Objekt mit den Buckets now/next/later sein; "
-            "jede Liste enthält Objekte mit 'title', 'deliverables_summary', 'kpi_summary'."
+            "jede Liste enthält für jede Maßnahme ein Objekt mit 'title', 'deliverables' (Liste), "
+            "'kpi_summary', 'evidence_summary' und 'trigger_refs' (Liste kurzer Trigger-Referenzen)."
         )
         content = self._run_text_task("summarize_measure_catalog", prompt, payload, output_key="catalog_summary")
 
@@ -153,31 +154,49 @@ class LLMClient:
         }
 
     @staticmethod
-    def _normalize_measure_details(raw: Any) -> dict[str, list[dict[str, str]]]:
+    def _normalize_measure_details(raw: Any) -> dict[str, list[dict[str, Any]]]:
         default = {"now": [], "next": [], "later": []}
         if not isinstance(raw, dict):
             return default
 
-        normalized: dict[str, list[dict[str, str]]] = {}
+        normalized: dict[str, list[dict[str, Any]]] = {}
         for bucket in ("now", "next", "later"):
             entries = raw.get(bucket, [])
             if not isinstance(entries, list):
                 normalized[bucket] = []
                 continue
 
-            bucket_items: list[dict[str, str]] = []
-            for item in entries[:3]:
+            bucket_items: list[dict[str, Any]] = []
+            for item in entries:
                 if not isinstance(item, dict):
                     continue
                 title = str(item.get("title") or "").strip()
-                deliverables_summary = str(item.get("deliverables_summary") or "").strip()
+                raw_deliverables = item.get("deliverables", [])
+                deliverables = (
+                    [str(entry).strip() for entry in raw_deliverables if str(entry).strip()]
+                    if isinstance(raw_deliverables, list)
+                    else []
+                )
+                if not deliverables:
+                    deliverables_summary = str(item.get("deliverables_summary") or "").strip()
+                    if deliverables_summary:
+                        deliverables = [deliverables_summary]
                 kpi_summary = str(item.get("kpi_summary") or "").strip()
-                if title or deliverables_summary or kpi_summary:
+                evidence_summary = str(item.get("evidence_summary") or "").strip()
+                raw_trigger_refs = item.get("trigger_refs", [])
+                trigger_refs = (
+                    [str(entry).strip() for entry in raw_trigger_refs if str(entry).strip()]
+                    if isinstance(raw_trigger_refs, list)
+                    else []
+                )
+                if title or deliverables or kpi_summary or evidence_summary or trigger_refs:
                     bucket_items.append(
                         {
                             "title": title,
-                            "deliverables_summary": deliverables_summary,
+                            "deliverables": deliverables,
                             "kpi_summary": kpi_summary,
+                            "evidence_summary": evidence_summary,
+                            "trigger_refs": trigger_refs,
                         }
                     )
             normalized[bucket] = bucket_items
@@ -334,13 +353,13 @@ class LLMClient:
     def _dummy_response(task_name: str, payload: dict[str, Any]) -> str:
         if task_name == "summarize_use_case":
             return (
-                "[Dummy] Das Unternehmen möchte BI und Predictive Analytics strukturiert ausbauen. "
+                "Das Unternehmen möchte BI und Predictive Analytics strukturiert ausbauen. "
                 "Die bisherigen Befunde zeigen Handlungsbedarf bei Datenqualität, Prozessen und Kompetenzen. "
                 "Durch gezielte Maßnahmen wird eine stabilere Entscheidungsgrundlage und höherer Geschäftsnutzen erwartet."
             )
         if task_name == "generate_assessment_rationale":
             return (
-                f"[Dummy] Die Bewertung ergibt sich aus dem Zusammenspiel der Dimensionswerte. "
+                f"Die Bewertung ergibt sich aus dem Zusammenspiel der Dimensionswerte. "
                 f"Der ermittelte Reifegrad ist konsistent mit den dokumentierten Findings ({payload.get('assessment_type', 'Assessment')})."
             )
         if task_name == "draft_measures":
@@ -356,7 +375,7 @@ class LLMClient:
             return json.dumps(
                 {
                     "headline": "Ergebnis Maßnahmenkatalog",
-                    "executive_summary": "[Dummy] Der Katalog priorisiert zuerst Basismaßnahmen mit hohem Hebel und reduziert so kurzfristig die größten Reifegradlücken.",
+                    "executive_summary": "Der Katalog priorisiert zuerst Basismaßnahmen mit hohem Hebel und reduziert so kurzfristig die größten Reifegradlücken.",
                     "now": [
                         "Governance-Grundlagen und Rollen verbindlich festlegen.",
                         "Datenqualitätsprobleme in den kritischsten Feldern systematisch beheben.",
@@ -372,15 +391,27 @@ class LLMClient:
                         "now": [
                             {
                                 "title": "Governance-Grundlagen und Rollen verbindlich festlegen.",
-                                "deliverables_summary": "Lieferobjekte: Rollenmodell, RACI und Governance-Board-Rhythmus.",
+                                "deliverables": [
+                                    "Rollenmodell für Data-/BI-Verantwortung verabschiedet.",
+                                    "RACI mit Eskalationswegen veröffentlicht.",
+                                    "Governance-Board-Takt mit Agenda und Protokoll etabliert.",
+                                ],
                                 "kpi_summary": "KPI: Owner-Abdeckung >= 90% und Review-Teilnahmequote.",
+                                "evidence_summary": "Abgeleitet aus niedrigen Werten in BI_D1 mit fehlender Ownership-Klarheit.",
+                                "trigger_refs": ["DA_01: Owner unklar", "DA_02: Governance-Prozess fehlt"],
                             }
                         ],
                         "next": [
                             {
                                 "title": "Skalierbare Analytics-/Automations-Standards ausrollen.",
-                                "deliverables_summary": "Lieferobjekte: Standard-Templates und verbindliche Qualitäts-Checks.",
+                                "deliverables": [
+                                    "Standard-Templates für Use-Case-Umsetzung eingeführt.",
+                                    "Qualitäts-Checkliste im Delivery-Prozess verankert.",
+                                    "Review-Routine mit Fachbereich und IT umgesetzt.",
+                                ],
                                 "kpi_summary": "KPI: Anteil standardisierter Use Cases und reduzierte Durchlaufzeit.",
+                                "evidence_summary": "Abgeleitet aus heterogener Prozessreife und wiederkehrenden Umsetzungsabweichungen.",
+                                "trigger_refs": ["PA_03: Prozessvarianz hoch", "COUP_02: Übergaben uneinheitlich"],
                             }
                         ],
                         "later": [],
@@ -388,4 +419,4 @@ class LLMClient:
                 },
                 ensure_ascii=False,
             )
-        return "[Dummy] Kein Ergebnis verfügbar."
+        return "Kein Ergebnis verfügbar."

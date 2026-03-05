@@ -52,6 +52,22 @@ class AssessmentResult(BaseModel):
 class AssessmentService:
     def __init__(self, config_dir: Path | None = None) -> None:
         self._config_dir = config_dir or Path(__file__).resolve().parents[1] / "config"
+        self._question_meta = self._load_question_meta()
+
+
+    def _load_question_meta(self) -> dict[str, tuple[float, float, str]]:
+        path = self._config_dir / "questionnaire_v1.0.json"
+        if not path.exists():
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        meta: dict[str, tuple[float, float, str]] = {}
+        for question in payload.get("questions", []):
+            question_id = str(question.get("id") or "")
+            if not question_id:
+                continue
+            scale = question.get("scale") or {}
+            meta[question_id] = (float(scale.get("min", 1)), float(scale.get("max", 5)), str(question.get("direction") or "higher_is_better"))
+        return meta
 
     @lru_cache(maxsize=8)
     def _load_scoring(self, area: str, version: str) -> AssessmentScoringConfig:
@@ -163,7 +179,8 @@ class AssessmentService:
         top_items: list[dict[str, Any]] = []
         for question_id in dimension.questions:
             answer = answers.get(question_id)
-            deficit = self._deficit_score(answer)
+            min_v, max_v, direction = self._question_meta.get(question_id, (1.0, 5.0, "higher_is_better"))
+            deficit = self._deficit_score(answer, min_v, max_v, direction)
             if deficit is None:
                 continue
             top_items.append({"item_id": question_id, "answer": answer, "deficit_score": deficit})
@@ -173,7 +190,7 @@ class AssessmentService:
         return critical_dimension_id, severity, top_items
 
     @staticmethod
-    def _deficit_score(answer: Any, min_value: float = 1.0, max_value: float = 5.0) -> float | None:
+    def _deficit_score(answer: Any, min_value: float = 1.0, max_value: float = 5.0, direction: str = "higher_is_better") -> float | None:
         if max_value <= min_value:
             return None
         try:
@@ -181,7 +198,7 @@ class AssessmentService:
         except (TypeError, ValueError):
             return None
 
-        normalized = 1 - ((value - min_value) / (max_value - min_value))
+        normalized = (1 - ((value - min_value) / (max_value - min_value))) if direction == "higher_is_better" else ((value - min_value) / (max_value - min_value))
         return round(max(0.0, min(1.0, normalized)), 4)
 
     def _score_answer(self, answer: Any, score_config: QuestionScoringConfig) -> float:

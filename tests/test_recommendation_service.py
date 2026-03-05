@@ -1,3 +1,4 @@
+from pathlib import Path
 import unittest
 
 from adapters.llm_client import LLMClient
@@ -15,6 +16,41 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertTrue(registry)
         self.assertNotEqual(version, "default")
         self.assertTrue(all(len(item.deliverables) == 3 for item in registry.values()))
+
+
+    def test_templates_deliverables_not_three_errors(self) -> None:
+        from tempfile import NamedTemporaryFile
+        import json
+
+        broken = {
+            "schema_version": "1.0.0",
+            "template_version": "1.0.0",
+            "templates": [
+                {
+                    "template_id": "BROKEN_01",
+                    "title": "Broken Template",
+                    "category": "governance",
+                    "applies_to": {"dimensions": ["BI_D1"]},
+                    "goal": "A sufficiently long goal text",
+                    "deliverables": ["only one"],
+                    "kpi": {
+                        "name": "KPI",
+                        "baseline_definition": "baseline defined",
+                        "target": "target",
+                        "measurement": "measurement text",
+                        "frequency": "monthly"
+                    },
+                    "impact": 3,
+                    "effort": 2
+                }
+            ]
+        }
+        with NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+            json.dump(broken, handle)
+            path = handle.name
+
+        with self.assertRaises(TemplateValidationError):
+            load_templates(Path(path), dev_mode=True)
 
     def test_priority_score_not_zero(self) -> None:
         synthesis = Synthesis(synthesis_id="syn-1", answer_set_id="as-1", bi_assessment_id="bi-1", pa_assessment_id="pa-1", recommendation="r")

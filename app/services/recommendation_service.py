@@ -148,7 +148,7 @@ class RecommendationService:
         )
 
     @staticmethod
-    def calculate_deficit_score(answer: Any, min_value: float, max_value: float) -> float | None:
+    def calculate_deficit_score(answer: Any, min_value: float, max_value: float, direction: str = "higher_is_better") -> float | None:
         if answer is None:
             return None
         if max_value <= min_value:
@@ -157,7 +157,7 @@ class RecommendationService:
             value = float(answer)
         except (TypeError, ValueError):
             return None
-        normalized = 1 - ((value - min_value) / (max_value - min_value))
+        normalized = (1 - ((value - min_value) / (max_value - min_value))) if direction == "higher_is_better" else ((value - min_value) / (max_value - min_value))
         return round(max(0.0, min(1.0, normalized)), 4)
 
     @staticmethod
@@ -172,8 +172,8 @@ class RecommendationService:
             for question_id in questions:
                 if question_id not in answers:
                     continue
-                min_v, max_v = self._question_meta.get(question_id, (1.0, 5.0))
-                deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v)
+                min_v, max_v, direction = self._question_meta.get(question_id, (1.0, 5.0, "higher_is_better"))
+                deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v, direction)
                 if deficit is None:
                     continue
                 items.append(
@@ -197,7 +197,8 @@ class RecommendationService:
                 break
             if any(item["item_id"] == question_id for item in selected):
                 continue
-            deficit = self.calculate_deficit_score(answers.get(question_id), *self._question_meta.get(question_id, (1.0, 5.0))) or 0.0
+            min_v, max_v, direction = self._question_meta.get(question_id, (1.0, 5.0, "higher_is_better"))
+            deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v, direction) or 0.0
             selected.append(
                 {
                     "item_id": question_id,
@@ -309,16 +310,20 @@ class RecommendationService:
                     return "Data Quality vor Industrialisierung"
         return "Keine aktive Gate-Blockade"
 
-    def _load_question_meta(self) -> dict[str, tuple[float, float]]:
+    def _load_question_meta(self) -> dict[str, tuple[float, float, str]]:
         path = self._scoring_dir / "questionnaire_v1.0.json"
         if not path.exists():
             return {}
         payload = json.loads(path.read_text(encoding="utf-8"))
-        return {
-            str(question.get("id")): (float((question.get("scale") or {}).get("min", 1)), float((question.get("scale") or {}).get("max", 5)))
-            for question in payload.get("questions", [])
-            if question.get("id")
-        }
+        meta: dict[str, tuple[float, float, str]] = {}
+        for question in payload.get("questions", []):
+            question_id = str(question.get("id") or "")
+            if not question_id:
+                continue
+            scale = question.get("scale") or {}
+            direction = str(question.get("direction") or "higher_is_better")
+            meta[question_id] = (float(scale.get("min", 1)), float(scale.get("max", 5)), direction)
+        return meta
 
     def _load_question_labels(self) -> dict[str, str]:
         path = self._scoring_dir / "questionnaire_v1.0.json"

@@ -155,13 +155,24 @@ def _render_question(question: dict, current_value: object) -> object:
 
 
 def _resolve_question_type(question: dict) -> QuestionType:
-    answer_type = str(question.get("answer_type") or "").strip().lower()
-    if answer_type:
-        return QuestionType(answer_type)
+    answer_type = question.get("answer_type")
+    if isinstance(answer_type, QuestionType):
+        return answer_type
+
+    normalized_answer_type = str(answer_type or "").strip().lower()
+    if normalized_answer_type.startswith("questiontype."):
+        normalized_answer_type = normalized_answer_type.split(".", maxsplit=1)[1]
+
+    if normalized_answer_type:
+        try:
+            return QuestionType(normalized_answer_type)
+        except ValueError:
+            pass
 
     legacy_type = str(question.get("type") or "").strip().upper()
     legacy_map = {
         "SCALE": QuestionType.LIKERT,
+        "LIKERT": QuestionType.LIKERT,
         "TEXT": QuestionType.TEXT,
         "NUMBER": QuestionType.NUMBER,
         "SINGLE_CHOICE": QuestionType.SINGLE_CHOICE,
@@ -169,7 +180,7 @@ def _resolve_question_type(question: dict) -> QuestionType:
     }
     resolved = legacy_map.get(legacy_type)
     if resolved is None:
-        raise ValueError(f"Unbekannter Fragetyp: {question.get('type')}")
+        raise ValueError(f"Unbekannter Fragetyp: answer_type={answer_type}, type={question.get('type')}")
     return resolved
 
 

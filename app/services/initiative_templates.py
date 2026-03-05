@@ -68,7 +68,7 @@ class TemplateValidationError(ValueError):
 
 
 def _templates_schema_validator() -> Draft202012Validator:
-    schema_path = Path(__file__).resolve().parents[2] / "schemas" / "templates.schema.json"
+    schema_path = Path(__file__).resolve().parents[1] / "schemas" / "templates.schema.json"
     payload = json.loads(schema_path.read_text(encoding="utf-8"))
     return Draft202012Validator(payload)
 

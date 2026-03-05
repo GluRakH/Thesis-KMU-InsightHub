@@ -61,7 +61,7 @@ class ValidationResult(BaseModel):
 class QuestionnaireService:
     def __init__(self, config_dir: Path | None = None, schemas_dir: Path | None = None, dev_mode: bool = True) -> None:
         self._config_dir = config_dir or Path(__file__).resolve().parents[1] / "config"
-        self._schemas_dir = schemas_dir or Path(__file__).resolve().parents[2] / "schemas"
+        self._schemas_dir = schemas_dir or Path(__file__).resolve().parents[1] / "schemas"
         self._dev_mode = dev_mode
 
     @lru_cache(maxsize=8)

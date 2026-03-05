@@ -10,7 +10,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_02",
@@ -20,7 +21,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_03",
@@ -30,7 +32,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_04",
@@ -40,7 +43,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_05",
@@ -50,7 +54,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_06",
@@ -60,7 +65,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "CTX_07",
@@ -70,7 +76,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_01",
@@ -80,7 +87,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_02",
@@ -90,7 +98,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_03",
@@ -100,7 +109,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_04",
@@ -110,7 +120,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_05",
@@ -120,7 +131,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_06",
@@ -130,7 +142,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_07",
@@ -140,7 +153,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_08",
@@ -150,7 +164,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_09",
@@ -160,7 +175,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_10",
@@ -170,7 +186,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_11",
@@ -180,7 +197,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "DA_12",
@@ -190,7 +208,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_01",
@@ -200,7 +219,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_02",
@@ -210,7 +230,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_03",
@@ -220,7 +241,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_04",
@@ -230,7 +252,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_05",
@@ -240,7 +263,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_06",
@@ -250,7 +274,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_07",
@@ -260,7 +285,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "PA_08",
@@ -270,7 +296,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "COUP_01",
@@ -280,7 +307,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "COUP_02",
@@ -290,7 +318,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "COUP_03",
@@ -300,7 +329,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "COUP_04",
@@ -310,7 +340,8 @@
       "scale": {
         "min": 1,
         "max": 5
-      }
+      },
+      "direction": "higher_is_better"
     },
     {
       "id": "SYN_01",
@@ -324,7 +355,8 @@
         "Compliance/Risikoreduktion",
         "Transparenz/Steuerbarkeit",
         "Umsatz-/Serviceverbesserung"
-      ]
+      ],
+      "direction": "higher_is_better"
     },
     {
       "id": "SYN_02",
@@ -338,7 +370,8 @@
         "Datenlage unklar/heterogen",
         "Compliance/Regulatorik dominant",
         "Abhängigkeit von Drittanbietern/Systemen"
-      ]
+      ],
+      "direction": "higher_is_better"
     },
     {
       "id": "SYN_03",
@@ -352,7 +385,8 @@
         "Entscheidungsempfehlung",
         "Ausführung/Automatisierung von Prozessschritten",
         "End-to-End Orchestrierung (Insight → Action)"
-      ]
+      ],
+      "direction": "higher_is_better"
     },
     {
       "id": "SYN_04",
@@ -367,7 +401,8 @@
         "Data Warehouse / Data Lake",
         "RPA-Plattform / Workflow-Tool",
         "Keine klare zentrale Datenplattform"
-      ]
+      ],
+      "direction": "higher_is_better"
     },
     {
       "id": "SYN_05",
@@ -380,7 +415,8 @@
         "Konkrete Umsetzungsroadmap (Schritte)",
         "Grobe Wirtschaftlichkeitsabschätzung",
         "Risiko-/Machbarkeitsbewertung"
-      ]
+      ],
+      "direction": "higher_is_better"
     }
   ]
 }

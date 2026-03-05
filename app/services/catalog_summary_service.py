@@ -2,10 +2,31 @@ from __future__ import annotations
 
 from typing import Any
 import logging
+import re
 
 from adapters.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
+
+INVALID_TEXT_PATTERN = re.compile(r"\b(invalid|n/?a|nicht\s+definiert)\b", re.IGNORECASE)
+
+
+def _is_useful_text(s: str) -> bool:
+    text = str(s or "").strip()
+    if not text:
+        return False
+    return INVALID_TEXT_PATTERN.search(text) is None
+
+
+def _format_trigger_ref(trigger: dict[str, Any]) -> str:
+    item_id = trigger.get("item_id") or "?"
+    label = trigger.get("label", item_id)
+    answer = trigger.get("answer_value", trigger.get("answer", "?"))
+    try:
+        deficit = float(trigger.get("deficit_score", 0.0))
+    except (TypeError, ValueError):
+        deficit = 0.0
+    return f"{item_id}: {label} | answer={answer} | deficit={deficit:.2f}"
 
 
 def build_catalog_summary(
@@ -84,12 +105,14 @@ def _merge_measure_details(
             if fallback_index >= 0:
                 used_fallback_indices.add(fallback_index)
 
+            llm_kpi_summary = str(llm_item.get("kpi_summary") or "")
+            llm_evidence_summary = str(llm_item.get("evidence_summary") or "")
             merged[bucket].append(
                 {
                     "title": llm_item.get("title") or fallback.get("title") or "",
                     "deliverables": llm_item.get("deliverables") or fallback.get("deliverables") or [],
-                    "kpi_summary": llm_item.get("kpi_summary") or fallback.get("kpi_summary") or "",
-                    "evidence_summary": llm_item.get("evidence_summary") or fallback.get("evidence_summary") or "",
+                    "kpi_summary": llm_kpi_summary if _is_useful_text(llm_kpi_summary) else fallback.get("kpi_summary") or "",
+                    "evidence_summary": llm_evidence_summary if _is_useful_text(llm_evidence_summary) else fallback.get("evidence_summary") or "",
                     "trigger_refs": llm_item.get("trigger_refs") or fallback.get("trigger_refs") or [],
                 }
             )
@@ -137,14 +160,18 @@ def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[
         for raw_item in measures_by_bucket.get(bucket, []):
             item, errors = _validated_item(raw_item, dev_mode=dev_mode)
             triggers = item.get("trigger_items", [])[:3]
+            trigger_refs = [_format_trigger_ref(trigger) for trigger in triggers]
+            trigger_ids = ", ".join(str(trigger.get("item_id") or "?") for trigger in triggers) or "keine"
+            dimension = str(item.get("dimension") or "unbekannt")
+            deterministic_evidence = f"Dimension {dimension}; Top-Trigger: {trigger_ids}."
             if errors:
                 details[bucket].append(
                     {
                         "title": f"INVALID: {item.get('title')}",
                         "deliverables": item.get("deliverables", []),
                         "kpi_summary": f"INVALID ITEM – {'; '.join(errors)}",
-                        "evidence_summary": item.get("rationale", ""),
-                        "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in triggers],
+                        "evidence_summary": deterministic_evidence,
+                        "trigger_refs": trigger_refs,
                     }
                 )
                 continue
@@ -155,8 +182,8 @@ def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[
                     "title": item.get("title"),
                     "deliverables": item.get("deliverables", [])[:3],
                     "kpi_summary": f"{kpi.get('name')} | Ziel {kpi.get('target')} | Messung {kpi.get('measurement')}",
-                    "evidence_summary": item.get("rationale", ""),
-                    "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in triggers],
+                    "evidence_summary": deterministic_evidence,
+                    "trigger_refs": trigger_refs,
                 }
             )
 
@@ -192,6 +219,8 @@ def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]], dev_
                 if errors
                 else f"{kpi.get('name')} | Ziel {kpi.get('target')} | Messung {kpi.get('measurement')}"
             )
+            trigger_refs = [_format_trigger_ref(trigger) for trigger in trigger_items[:3]]
+            trigger_ids = ", ".join(str(trigger.get("item_id") or "?") for trigger in trigger_items[:3]) or "keine"
             payload[bucket].append(
                 {
                     "initiative_id": item.get("initiative_id"),
@@ -201,8 +230,8 @@ def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]], dev_
                     "dependencies": item.get("dependencies", []),
                     "deliverables": item.get("deliverables", [])[:3],
                     "kpi_summary": kpi_summary,
-                    "evidence_summary": item.get("rationale", ""),
-                    "trigger_refs": [f"{trigger.get('item_id')}: {trigger.get('label', trigger.get('item_id'))}" for trigger in trigger_items[:3]],
+                    "evidence_summary": f"Dimension {item.get('dimension') or 'unbekannt'}; Top-Trigger: {trigger_ids}.",
+                    "trigger_refs": trigger_refs,
                 }
             )
     return payload

@@ -1,0 +1,522 @@
+{
+  "run_id": "run-20260305193659",
+  "answer_set_id": "as-demo-001",
+  "timestamp": "2026-03-05T19:36:59.362692+00:00",
+  "configuration_hash": "f9a89ad46952f58dcddc2fc50307674f2e2155e039004d6e8c5e419615587c38",
+  "result": {
+    "export_version": "2.0.0",
+    "timestamp": "2026-03-05T19:36:59.362692+00:00",
+    "assessment": {
+      "bi": {
+        "score": 34.0,
+        "level_label": "L1",
+        "dimension_scores": {
+          "BI_D1": 22.0,
+          "BI_D2": 40.0,
+          "BI_D3": 50.0
+        }
+      },
+      "pa": {
+        "score": 41.0,
+        "level_label": "L2",
+        "dimension_scores": {
+          "PA_D1": 30.0,
+          "PA_D2": 45.0,
+          "PA_D3": 48.0
+        }
+      },
+      "synthesis": {
+        "synthesis_id": "syn-demo",
+        "answer_set_id": "as-demo-001",
+        "priority_focus": "Governance + Datenqualität"
+      },
+      "scores": {
+        "bi_score": 34.0,
+        "pa_score": 41.0
+      }
+    },
+    "initiatives": {
+      "now": [
+        {
+          "id": "INIT-BI-GOVERNANCE-01",
+          "title": "BI-Governance-Basics etablieren",
+          "dimension": "BI_D1",
+          "category": "governance",
+          "bucket": "now",
+          "priority_score": 4.2250000000000005,
+          "rank": 1,
+          "sequence_reason": "Keine aktive Gate-Blockade",
+          "diagnosis": "In BI_D1 zeigen DA_01=1 (deficit 1.00), DA_02=2 (deficit 0.75), DA_03=2 (deficit 0.75) fehlende Governance-Grundlagen und unklare Zuständigkeiten.",
+          "goal": "Verbindliche Datenverantwortung und Entscheidungswege für BI werden organisationsweit wirksam.",
+          "deliverables": [
+            "Data-Owner- und Data-Steward-Rollenmodell mit Verantwortungsmatrix (RACI)",
+            "Governance-Board mit Entscheidungslogik, Eskalationspfad und Terminserie",
+            "Verabschiedete BI-Richtlinie inkl. Freigabeprozess für KPI-Änderungen"
+          ],
+          "dependencies": [],
+          "template_id": "BI_GOV_FOUNDATION",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "Abgedeckte kritische Datenobjekte mit benanntem Owner",
+            "target": ">= 90% der kritischen Datenobjekte mit aktivem Owner bis Quartalsende",
+            "measurement": "Monatliche Stichprobe aus Datenkatalog und Governance-Protokollen",
+            "frequency": "monatlich",
+            "source_system": "Datenkatalog + Governance-Protokoll",
+            "owner_role": "Head of BI Governance"
+          },
+          "evidence": {
+            "dimension_id": "BI_D1",
+            "severity": 0.8333,
+            "trigger_items": [
+              {
+                "item_id": "DA_01",
+                "answer": 1,
+                "deficit_score": 1.0,
+                "label": "DA_01"
+              },
+              {
+                "item_id": "DA_02",
+                "answer": 2,
+                "deficit_score": 0.75,
+                "label": "DA_02"
+              },
+              {
+                "item_id": "DA_03",
+                "answer": 2,
+                "deficit_score": 0.75,
+                "label": "DA_03"
+              }
+            ],
+            "rationale": "Für BI_D1 priorisiert, weil die höchsten Defizite in DA_01 (1.00), DA_02 (0.75), DA_03 (0.75) liegen."
+          }
+        },
+        {
+          "id": "INIT-PA-GOVERNANCE-01",
+          "title": "PA-Governance und Use-Case-Steuerung standardisieren",
+          "dimension": "PA_D1",
+          "category": "governance",
+          "bucket": "now",
+          "priority_score": 3.30625,
+          "rank": 2,
+          "sequence_reason": "Keine aktive Gate-Blockade",
+          "diagnosis": "In PA_D1 signalisieren PA_01=2 (deficit 0.75), PA_02=2 (deficit 0.75) unklare Entscheidungs- und Freigabeprozesse für Automatisierung.",
+          "goal": "Automatisierungsvorhaben werden nach einheitlichen Kriterien priorisiert und risikobewusst gesteuert.",
+          "deliverables": [
+            "Use-Case Intake-Template mit Business Value, Risiko und Umsetzbarkeit",
+            "Stage-Gate-Prozess von Idee bis Betrieb inkl. Go/No-Go-Kriterien",
+            "Backlog-Board mit Priorisierungsschema und monatlicher Portfolioreview"
+          ],
+          "dependencies": [],
+          "template_id": "PA_GOV_FOUNDATION",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "Anteil priorisierter PA-Use-Cases mit dokumentiertem Gate-Status",
+            "target": ">= 85% der aktiven Use-Cases mit vollständigem Stage-Gate-Status",
+            "measurement": "Monatlicher Portfolio-Export aus dem Automatisierungs-Backlog",
+            "frequency": "monatlich",
+            "source_system": "PA Backlog",
+            "owner_role": "Automation Lead"
+          },
+          "evidence": {
+            "dimension_id": "PA_D1",
+            "severity": 0.75,
+            "trigger_items": [
+              {
+                "item_id": "PA_01",
+                "answer": 2,
+                "deficit_score": 0.75,
+                "label": "PA_01"
+              },
+              {
+                "item_id": "PA_02",
+                "answer": 2,
+                "deficit_score": 0.75,
+                "label": "PA_02"
+              }
+            ],
+            "rationale": "Für PA_D1 priorisiert, weil die höchsten Defizite in PA_01 (0.75), PA_02 (0.75) liegen."
+          }
+        }
+      ],
+      "next": [
+        {
+          "id": "INIT-BI-DATA-03",
+          "title": "Semantik- und KPI-Definitionen harmonisieren",
+          "dimension": "BI_D3",
+          "category": "data",
+          "bucket": "next",
+          "priority_score": 2.6,
+          "rank": 3,
+          "sequence_reason": "Governance vor Skalierung",
+          "diagnosis": "In BI_D3 deuten DA_09=None (deficit 0.00), DA_10=None (deficit 0.00) auf uneinheitliche Begriffe und fehlende semantische Standards hin.",
+          "goal": "Fachbereiche arbeiten mit einheitlichen KPI-Definitionen und nachvollziehbarer Datenherkunft.",
+          "deliverables": [
+            "Business Glossar mit verbindlichen KPI-Definitionen und Ownern",
+            "Semantische Schicht für Kernkennzahlen inkl. Berechnungslogik",
+            "Freigabeprozess für neue/angepasste Kennzahlen mit Versionierung"
+          ],
+          "dependencies": [
+            "INIT-BI-GOVERNANCE-01"
+          ],
+          "template_id": "BI_SEMANTIC_LAYER",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "KPI-Definitionstreue in Standardreports",
+            "target": ">= 90% der Standardreports nutzen freigegebene KPI-Definitionen",
+            "measurement": "Monatlicher Report-Audit gegen Glossar und Semantic Layer",
+            "frequency": "monatlich",
+            "source_system": "BI Reporting",
+            "owner_role": "BI Product Owner"
+          },
+          "evidence": {
+            "dimension_id": "BI_D3",
+            "severity": 0.0,
+            "trigger_items": [
+              {
+                "item_id": "DA_09",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "DA_09"
+              },
+              {
+                "item_id": "DA_10",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "DA_10"
+              }
+            ],
+            "rationale": "Für BI_D3 priorisiert, weil die höchsten Defizite in DA_09 (0.00), DA_10 (0.00) liegen."
+          }
+        },
+        {
+          "id": "INIT-BI-DATA-02",
+          "title": "Datenqualitätsregeln und Monitoring einführen",
+          "dimension": "BI_D2",
+          "category": "data",
+          "bucket": "next",
+          "priority_score": 2.166666666666667,
+          "rank": 4,
+          "sequence_reason": "Governance vor Skalierung",
+          "diagnosis": "DA_05=None (deficit 0.00), DA_06=None (deficit 0.00) zeigen in BI_D2 konsistente Qualitätsdefizite in den zentralen Datenobjekten.",
+          "goal": "Kritische BI-Daten sind mit klaren Qualitätsregeln hinterlegt und kontinuierlich überwacht.",
+          "deliverables": [
+            "Regelwerk für Vollständigkeit, Aktualität und Korrektheit je kritischem Datenobjekt",
+            "DQ-Dashboard mit Ampellogik und Incident-Workflow",
+            "Wöchentlicher Quality-Review mit Root-Cause- und Maßnahmenjournal"
+          ],
+          "dependencies": [
+            "INIT-BI-GOVERNANCE-01"
+          ],
+          "template_id": "BI_DQ_RULES",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "DQ-Regel-Compliance kritischer Datenobjekte",
+            "target": ">= 95% der DQ-Checks bestehen im Monatsmittel",
+            "measurement": "Automatisierte Auswertung der DQ-Checks pro Woche",
+            "frequency": "wöchentlich",
+            "source_system": "DQ Monitoring",
+            "owner_role": "Data Quality Manager"
+          },
+          "evidence": {
+            "dimension_id": "BI_D2",
+            "severity": 0.0,
+            "trigger_items": [
+              {
+                "item_id": "DA_05",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "DA_05"
+              },
+              {
+                "item_id": "DA_06",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "DA_06"
+              }
+            ],
+            "rationale": "Für BI_D2 priorisiert, weil die höchsten Defizite in DA_05 (0.00), DA_06 (0.00) liegen."
+          }
+        },
+        {
+          "id": "INIT-PA-TECHNICAL-02",
+          "title": "Automatisierungs-Pipeline industrialisieren",
+          "dimension": "PA_D2",
+          "category": "technical",
+          "bucket": "next",
+          "priority_score": 1.5333333333333332,
+          "rank": 5,
+          "sequence_reason": "Governance vor Skalierung",
+          "diagnosis": "PA_04=2 (deficit 0.75), PA_03=3 (deficit 0.50) zeigen in PA_D2 Lücken in Testbarkeit und operationaler Stabilität der Automatisierungen.",
+          "goal": "Automatisierungs-Lösungen werden mit wiederverwendbaren Build-, Test- und Release-Standards bereitgestellt.",
+          "deliverables": [
+            "Standardisierte CI/CD-Pipeline für Automatisierungsartefakte",
+            "Automatisierte Regressionstests für kritische Prozesspfade",
+            "Betriebshandbuch mit Monitoring, Alerting und Fallback-Prozeduren"
+          ],
+          "dependencies": [
+            "INIT-PA-GOVERNANCE-01"
+          ],
+          "template_id": "PA_PIPELINE_STANDARD",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "Fehlerfreie Deployments von Automatisierungen",
+            "target": ">= 90% der Releases ohne kritischen Incident in 30 Tagen",
+            "measurement": "Release- und Incident-Auswertung je Monat",
+            "frequency": "monatlich",
+            "source_system": "CI/CD + Incident Tool",
+            "owner_role": "Platform Engineer"
+          },
+          "evidence": {
+            "dimension_id": "PA_D2",
+            "severity": 0.625,
+            "trigger_items": [
+              {
+                "item_id": "PA_04",
+                "answer": 2,
+                "deficit_score": 0.75,
+                "label": "PA_04"
+              },
+              {
+                "item_id": "PA_03",
+                "answer": 3,
+                "deficit_score": 0.5,
+                "label": "PA_03"
+              }
+            ],
+            "rationale": "Für PA_D2 priorisiert, weil die höchsten Defizite in PA_04 (0.75), PA_03 (0.50) liegen."
+          }
+        },
+        {
+          "id": "INIT-PA-TECHNICAL-03",
+          "title": "PA-Betriebsmodell und Skalierungsroutine aufbauen",
+          "dimension": "PA_D3",
+          "category": "technical",
+          "bucket": "next",
+          "priority_score": 1.5333333333333332,
+          "rank": 6,
+          "sequence_reason": "Governance vor Skalierung",
+          "diagnosis": "In PA_D3 weisen PA_08=None (deficit 0.00), COUP_02=None (deficit 0.00) auf fehlende End-to-End-Verantwortung und Betriebsroutinen hin.",
+          "goal": "Automatisierungen werden über End-to-End-Prozesse stabil skaliert und wirtschaftlich betrieben.",
+          "deliverables": [
+            "Runbook-Set für Betrieb, Incident-Management und Kapazitätsplanung",
+            "SLA-Definitionen je Automatisierungsprozess inkl. Eskalation",
+            "Skalierungsboard mit quartalsweiser Roadmap für E2E-Integration"
+          ],
+          "dependencies": [
+            "INIT-PA-GOVERNANCE-01"
+          ],
+          "template_id": "PA_OPERATIONS",
+          "template_version": "2026.03",
+          "kpi": {
+            "name": "SLA-Erfüllung automatisierter Kernprozesse",
+            "target": ">= 95% SLA-Erfüllung über die letzten 8 Wochen",
+            "measurement": "Wöchentliche Betriebskennzahlen aus Monitoring und Ticketing",
+            "frequency": "wöchentlich",
+            "source_system": "Monitoring + Ticketing",
+            "owner_role": "Operations Manager"
+          },
+          "evidence": {
+            "dimension_id": "PA_D3",
+            "severity": 0.0,
+            "trigger_items": [
+              {
+                "item_id": "PA_08",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "PA_08"
+              },
+              {
+                "item_id": "COUP_02",
+                "answer": null,
+                "deficit_score": 0.0,
+                "label": "COUP_02"
+              }
+            ],
+            "rationale": "Für PA_D3 priorisiert, weil die höchsten Defizite in PA_08 (0.00), COUP_02 (0.00) liegen."
+          }
+        }
+      ],
+      "later": []
+    },
+    "rules_applied": {
+      "gates": [
+        {
+          "rule": "governance_first",
+          "domain": "BI",
+          "blocking_measure": "INIT-BI-GOVERNANCE-01",
+          "affected_measures": [
+            "INIT-BI-DATA-02",
+            "INIT-BI-DATA-03"
+          ]
+        },
+        {
+          "rule": "governance_first",
+          "domain": "PA",
+          "blocking_measure": "INIT-PA-GOVERNANCE-01",
+          "affected_measures": [
+            "INIT-PA-TECHNICAL-02",
+            "INIT-PA-TECHNICAL-03"
+          ]
+        }
+      ],
+      "thresholds": {
+        "governance": 0.6,
+        "data_quality": 0.55
+      },
+      "dependencies": [
+        {
+          "from": "INIT-BI-GOVERNANCE-01",
+          "to": "INIT-BI-DATA-02"
+        },
+        {
+          "from": "INIT-BI-GOVERNANCE-01",
+          "to": "INIT-BI-DATA-03"
+        },
+        {
+          "from": "INIT-PA-GOVERNANCE-01",
+          "to": "INIT-PA-TECHNICAL-02"
+        },
+        {
+          "from": "INIT-PA-GOVERNANCE-01",
+          "to": "INIT-PA-TECHNICAL-03"
+        }
+      ]
+    },
+    "generation_metadata": {
+      "template_version": "templates-2026.03",
+      "llm_model": "none",
+      "prompt_version": "templates-2026.03",
+      "temperature": 0.0,
+      "mode": "deterministic"
+    },
+    "catalog_summary": {
+      "headline": "Ergebnis Maßnahmenkatalog (deterministisch)",
+      "executive_summary": "Fokus: Governance + Datenqualität. Maßnahmen und Reihenfolge werden regelbasiert aus Scores, Severity und Triggern erzeugt.",
+      "now": [
+        "INIT-BI-GOVERNANCE-01: BI-Governance-Basics etablieren (BI_D1, Rang 1)",
+        "INIT-PA-GOVERNANCE-01: PA-Governance und Use-Case-Steuerung standardisieren (PA_D1, Rang 2)"
+      ],
+      "next": [
+        "INIT-BI-DATA-03: Semantik- und KPI-Definitionen harmonisieren (BI_D3, Rang 3)",
+        "INIT-BI-DATA-02: Datenqualitätsregeln und Monitoring einführen (BI_D2, Rang 4)",
+        "INIT-PA-TECHNICAL-02: Automatisierungs-Pipeline industrialisieren (PA_D2, Rang 5)",
+        "INIT-PA-TECHNICAL-03: PA-Betriebsmodell und Skalierungsroutine aufbauen (PA_D3, Rang 6)"
+      ],
+      "later": [],
+      "risks_and_dependencies": [
+        "INIT-BI-DATA-03 hängt ab von INIT-BI-GOVERNANCE-01",
+        "INIT-BI-DATA-02 hängt ab von INIT-BI-GOVERNANCE-01",
+        "INIT-PA-TECHNICAL-02 hängt ab von INIT-PA-GOVERNANCE-01",
+        "INIT-PA-TECHNICAL-03 hängt ab von INIT-PA-GOVERNANCE-01"
+      ],
+      "first_30_days": [
+        "Top-Now-Maßnahmen mit Ownern planen",
+        "KPI-Messung initial einrichten"
+      ],
+      "measure_details": {
+        "now": [
+          {
+            "title": "BI-Governance-Basics etablieren",
+            "deliverables": [
+              "Data-Owner- und Data-Steward-Rollenmodell mit Verantwortungsmatrix (RACI)",
+              "Governance-Board mit Entscheidungslogik, Eskalationspfad und Terminserie",
+              "Verabschiedete BI-Richtlinie inkl. Freigabeprozess für KPI-Änderungen"
+            ],
+            "kpi_summary": "Abgedeckte kritische Datenobjekte mit benanntem Owner | Ziel >= 90% der kritischen Datenobjekte mit aktivem Owner bis Quartalsende | Messung Monatliche Stichprobe aus Datenkatalog und Governance-Protokollen",
+            "evidence_summary": "Für BI_D1 priorisiert, weil die höchsten Defizite in DA_01 (1.00), DA_02 (0.75), DA_03 (0.75) liegen.",
+            "trigger_refs": [
+              "DA_01: DA_01",
+              "DA_02: DA_02",
+              "DA_03: DA_03"
+            ]
+          },
+          {
+            "title": "PA-Governance und Use-Case-Steuerung standardisieren",
+            "deliverables": [
+              "Use-Case Intake-Template mit Business Value, Risiko und Umsetzbarkeit",
+              "Stage-Gate-Prozess von Idee bis Betrieb inkl. Go/No-Go-Kriterien",
+              "Backlog-Board mit Priorisierungsschema und monatlicher Portfolioreview"
+            ],
+            "kpi_summary": "Anteil priorisierter PA-Use-Cases mit dokumentiertem Gate-Status | Ziel >= 85% der aktiven Use-Cases mit vollständigem Stage-Gate-Status | Messung Monatlicher Portfolio-Export aus dem Automatisierungs-Backlog",
+            "evidence_summary": "Für PA_D1 priorisiert, weil die höchsten Defizite in PA_01 (0.75), PA_02 (0.75) liegen.",
+            "trigger_refs": [
+              "PA_01: PA_01",
+              "PA_02: PA_02"
+            ]
+          }
+        ],
+        "next": [
+          {
+            "title": "Semantik- und KPI-Definitionen harmonisieren",
+            "deliverables": [
+              "Business Glossar mit verbindlichen KPI-Definitionen und Ownern",
+              "Semantische Schicht für Kernkennzahlen inkl. Berechnungslogik",
+              "Freigabeprozess für neue/angepasste Kennzahlen mit Versionierung"
+            ],
+            "kpi_summary": "KPI-Definitionstreue in Standardreports | Ziel >= 90% der Standardreports nutzen freigegebene KPI-Definitionen | Messung Monatlicher Report-Audit gegen Glossar und Semantic Layer",
+            "evidence_summary": "Für BI_D3 priorisiert, weil die höchsten Defizite in DA_09 (0.00), DA_10 (0.00) liegen.",
+            "trigger_refs": [
+              "DA_09: DA_09",
+              "DA_10: DA_10"
+            ]
+          },
+          {
+            "title": "Datenqualitätsregeln und Monitoring einführen",
+            "deliverables": [
+              "Regelwerk für Vollständigkeit, Aktualität und Korrektheit je kritischem Datenobjekt",
+              "DQ-Dashboard mit Ampellogik und Incident-Workflow",
+              "Wöchentlicher Quality-Review mit Root-Cause- und Maßnahmenjournal"
+            ],
+            "kpi_summary": "DQ-Regel-Compliance kritischer Datenobjekte | Ziel >= 95% der DQ-Checks bestehen im Monatsmittel | Messung Automatisierte Auswertung der DQ-Checks pro Woche",
+            "evidence_summary": "Für BI_D2 priorisiert, weil die höchsten Defizite in DA_05 (0.00), DA_06 (0.00) liegen.",
+            "trigger_refs": [
+              "DA_05: DA_05",
+              "DA_06: DA_06"
+            ]
+          },
+          {
+            "title": "Automatisierungs-Pipeline industrialisieren",
+            "deliverables": [
+              "Standardisierte CI/CD-Pipeline für Automatisierungsartefakte",
+              "Automatisierte Regressionstests für kritische Prozesspfade",
+              "Betriebshandbuch mit Monitoring, Alerting und Fallback-Prozeduren"
+            ],
+            "kpi_summary": "Fehlerfreie Deployments von Automatisierungen | Ziel >= 90% der Releases ohne kritischen Incident in 30 Tagen | Messung Release- und Incident-Auswertung je Monat",
+            "evidence_summary": "Für PA_D2 priorisiert, weil die höchsten Defizite in PA_04 (0.75), PA_03 (0.50) liegen.",
+            "trigger_refs": [
+              "PA_04: PA_04",
+              "PA_03: PA_03"
+            ]
+          },
+          {
+            "title": "PA-Betriebsmodell und Skalierungsroutine aufbauen",
+            "deliverables": [
+              "Runbook-Set für Betrieb, Incident-Management und Kapazitätsplanung",
+              "SLA-Definitionen je Automatisierungsprozess inkl. Eskalation",
+              "Skalierungsboard mit quartalsweiser Roadmap für E2E-Integration"
+            ],
+            "kpi_summary": "SLA-Erfüllung automatisierter Kernprozesse | Ziel >= 95% SLA-Erfüllung über die letzten 8 Wochen | Messung Wöchentliche Betriebskennzahlen aus Monitoring und Ticketing",
+            "evidence_summary": "Für PA_D3 priorisiert, weil die höchsten Defizite in PA_08 (0.00), COUP_02 (0.00) liegen.",
+            "trigger_refs": [
+              "PA_08: PA_08",
+              "COUP_02: COUP_02"
+            ]
+          }
+        ],
+        "later": []
+      },
+      "generation_mode": "deterministic",
+      "info": "Ableitung regelbasiert; textuelle Formulierungen optional generierbar."
+    },
+    "answers": {
+      "DA_01": 1,
+      "DA_02": 2,
+      "DA_03": 2,
+      "DA_04": 3,
+      "PA_01": 2,
+      "PA_02": 2,
+      "PA_03": 3,
+      "PA_04": 2
+    }
+  }
+}

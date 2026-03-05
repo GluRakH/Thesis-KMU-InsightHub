@@ -1,0 +1,152 @@
+{
+  "template_version": "2026.03",
+  "items": {
+    "BI_GOV_FOUNDATION": {
+      "title": "BI-Governance-Basics etablieren",
+      "category": "governance",
+      "goal": "Verbindliche Datenverantwortung und Entscheidungswege für BI werden organisationsweit wirksam.",
+      "diagnosis_template": "In {dimension} zeigen {trigger_summary} fehlende Governance-Grundlagen und unklare Zuständigkeiten.",
+      "deliverables": [
+        "Data-Owner- und Data-Steward-Rollenmodell mit Verantwortungsmatrix (RACI)",
+        "Governance-Board mit Entscheidungslogik, Eskalationspfad und Terminserie",
+        "Verabschiedete BI-Richtlinie inkl. Freigabeprozess für KPI-Änderungen"
+      ],
+      "kpi": {
+        "name": "Abgedeckte kritische Datenobjekte mit benanntem Owner",
+        "target_template": ">= 90% der kritischen Datenobjekte mit aktivem Owner bis Quartalsende",
+        "measurement": "Monatliche Stichprobe aus Datenkatalog und Governance-Protokollen",
+        "frequency": "monatlich",
+        "source_system": "Datenkatalog + Governance-Protokoll",
+        "owner_role": "Head of BI Governance"
+      },
+      "impact": 5,
+      "effort": 2
+    },
+    "PA_GOV_FOUNDATION": {
+      "title": "PA-Governance und Use-Case-Steuerung standardisieren",
+      "category": "governance",
+      "goal": "Automatisierungsvorhaben werden nach einheitlichen Kriterien priorisiert und risikobewusst gesteuert.",
+      "diagnosis_template": "In {dimension} signalisieren {trigger_summary} unklare Entscheidungs- und Freigabeprozesse für Automatisierung.",
+      "deliverables": [
+        "Use-Case Intake-Template mit Business Value, Risiko und Umsetzbarkeit",
+        "Stage-Gate-Prozess von Idee bis Betrieb inkl. Go/No-Go-Kriterien",
+        "Backlog-Board mit Priorisierungsschema und monatlicher Portfolioreview"
+      ],
+      "kpi": {
+        "name": "Anteil priorisierter PA-Use-Cases mit dokumentiertem Gate-Status",
+        "target_template": ">= 85% der aktiven Use-Cases mit vollständigem Stage-Gate-Status",
+        "measurement": "Monatlicher Portfolio-Export aus dem Automatisierungs-Backlog",
+        "frequency": "monatlich",
+        "source_system": "PA Backlog",
+        "owner_role": "Automation Lead"
+      },
+      "impact": 5,
+      "effort": 2
+    },
+    "BI_DQ_RULES": {
+      "title": "Datenqualitätsregeln und Monitoring einführen",
+      "category": "data",
+      "goal": "Kritische BI-Daten sind mit klaren Qualitätsregeln hinterlegt und kontinuierlich überwacht.",
+      "diagnosis_template": "{trigger_summary} zeigen in {dimension} konsistente Qualitätsdefizite in den zentralen Datenobjekten.",
+      "deliverables": [
+        "Regelwerk für Vollständigkeit, Aktualität und Korrektheit je kritischem Datenobjekt",
+        "DQ-Dashboard mit Ampellogik und Incident-Workflow",
+        "Wöchentlicher Quality-Review mit Root-Cause- und Maßnahmenjournal"
+      ],
+      "kpi": {
+        "name": "DQ-Regel-Compliance kritischer Datenobjekte",
+        "target_template": ">= 95% der DQ-Checks bestehen im Monatsmittel",
+        "measurement": "Automatisierte Auswertung der DQ-Checks pro Woche",
+        "frequency": "wöchentlich",
+        "source_system": "DQ Monitoring",
+        "owner_role": "Data Quality Manager"
+      },
+      "impact": 5,
+      "effort": 3
+    },
+    "BI_SEMANTIC_LAYER": {
+      "title": "Semantik- und KPI-Definitionen harmonisieren",
+      "category": "data",
+      "goal": "Fachbereiche arbeiten mit einheitlichen KPI-Definitionen und nachvollziehbarer Datenherkunft.",
+      "diagnosis_template": "In {dimension} deuten {trigger_summary} auf uneinheitliche Begriffe und fehlende semantische Standards hin.",
+      "deliverables": [
+        "Business Glossar mit verbindlichen KPI-Definitionen und Ownern",
+        "Semantische Schicht für Kernkennzahlen inkl. Berechnungslogik",
+        "Freigabeprozess für neue/angepasste Kennzahlen mit Versionierung"
+      ],
+      "kpi": {
+        "name": "KPI-Definitionstreue in Standardreports",
+        "target_template": ">= 90% der Standardreports nutzen freigegebene KPI-Definitionen",
+        "measurement": "Monatlicher Report-Audit gegen Glossar und Semantic Layer",
+        "frequency": "monatlich",
+        "source_system": "BI Reporting",
+        "owner_role": "BI Product Owner"
+      },
+      "impact": 4,
+      "effort": 2
+    },
+    "PA_PIPELINE_STANDARD": {
+      "title": "Automatisierungs-Pipeline industrialisieren",
+      "category": "technical",
+      "goal": "Automatisierungs-Lösungen werden mit wiederverwendbaren Build-, Test- und Release-Standards bereitgestellt.",
+      "diagnosis_template": "{trigger_summary} zeigen in {dimension} Lücken in Testbarkeit und operationaler Stabilität der Automatisierungen.",
+      "deliverables": [
+        "Standardisierte CI/CD-Pipeline für Automatisierungsartefakte",
+        "Automatisierte Regressionstests für kritische Prozesspfade",
+        "Betriebshandbuch mit Monitoring, Alerting und Fallback-Prozeduren"
+      ],
+      "kpi": {
+        "name": "Fehlerfreie Deployments von Automatisierungen",
+        "target_template": ">= 90% der Releases ohne kritischen Incident in 30 Tagen",
+        "measurement": "Release- und Incident-Auswertung je Monat",
+        "frequency": "monatlich",
+        "source_system": "CI/CD + Incident Tool",
+        "owner_role": "Platform Engineer"
+      },
+      "impact": 4,
+      "effort": 3
+    },
+    "PA_OPERATIONS": {
+      "title": "PA-Betriebsmodell und Skalierungsroutine aufbauen",
+      "category": "technical",
+      "goal": "Automatisierungen werden über End-to-End-Prozesse stabil skaliert und wirtschaftlich betrieben.",
+      "diagnosis_template": "In {dimension} weisen {trigger_summary} auf fehlende End-to-End-Verantwortung und Betriebsroutinen hin.",
+      "deliverables": [
+        "Runbook-Set für Betrieb, Incident-Management und Kapazitätsplanung",
+        "SLA-Definitionen je Automatisierungsprozess inkl. Eskalation",
+        "Skalierungsboard mit quartalsweiser Roadmap für E2E-Integration"
+      ],
+      "kpi": {
+        "name": "SLA-Erfüllung automatisierter Kernprozesse",
+        "target_template": ">= 95% SLA-Erfüllung über die letzten 8 Wochen",
+        "measurement": "Wöchentliche Betriebskennzahlen aus Monitoring und Ticketing",
+        "frequency": "wöchentlich",
+        "source_system": "Monitoring + Ticketing",
+        "owner_role": "Operations Manager"
+      },
+      "impact": 4,
+      "effort": 3
+    },
+    "ENABLEMENT": {
+      "title": "Kompetenzaufbau für BI/PA-Enablement umsetzen",
+      "category": "organizational",
+      "goal": "Fachliche und technische Schlüsselkompetenzen für BI/PA sind durch Rollenpfade und Trainings abgesichert.",
+      "diagnosis_template": "{trigger_summary} machen in {dimension} Kompetenz- und Enablement-Lücken sichtbar.",
+      "deliverables": [
+        "Skill-Matrix für BI/PA-Rollen mit Soll-/Ist-Abgleich",
+        "Trainingscurriculum mit Pflichtmodulen und Praxisformaten",
+        "Mentoring- und Community-of-Practice-Format mit monatlichem Review"
+      ],
+      "kpi": {
+        "name": "Abdeckung kritischer Rollen mit Sollkompetenz",
+        "target_template": ">= 80% der kritischen Rollen erfüllen definierte Sollkompetenz",
+        "measurement": "Quartalsweises Skill-Assessment mit HR/Teamlead-Abgleich",
+        "frequency": "quartalsweise",
+        "source_system": "HR Skill Assessment",
+        "owner_role": "People Lead"
+      },
+      "impact": 3,
+      "effort": 2
+    }
+  }
+}

@@ -189,7 +189,7 @@ def _append_catalog_summary_markdown(lines: list[str], payload: dict[str, Any]) 
 
     details = summary.get("measure_details", {})
     if isinstance(details, dict) and any(details.get(bucket) for bucket in ("now", "next", "later")):
-        lines.append("### Maßnahmen-Details (Deliverables & KPI)")
+        lines.append("### Maßnahmen-Details (vollständig inkl. Evidenz-Trigger)")
         for bucket, title in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
             entries = details.get(bucket, [])
             if not entries:
@@ -199,9 +199,19 @@ def _append_catalog_summary_markdown(lines: list[str], payload: dict[str, Any]) 
                 if not isinstance(entry, dict):
                     continue
                 measure_title = str(entry.get("title") or "Maßnahme")
-                deliverables = str(entry.get("deliverables_summary") or "")
+                deliverables = entry.get("deliverables") if isinstance(entry.get("deliverables"), list) else []
                 kpi_summary = str(entry.get("kpi_summary") or "")
-                lines.append(f"  - {measure_title}: {(deliverables + ' ' + kpi_summary).strip()}")
+                evidence_summary = str(entry.get("evidence_summary") or "")
+                trigger_refs = entry.get("trigger_refs") if isinstance(entry.get("trigger_refs"), list) else []
+                lines.append(f"  - {measure_title}")
+                for deliverable in deliverables:
+                    lines.append(f"    - Deliverable: {deliverable}")
+                if kpi_summary:
+                    lines.append(f"    - KPI: {kpi_summary}")
+                if evidence_summary:
+                    lines.append(f"    - Evidenz: {evidence_summary}")
+                for trigger_ref in trigger_refs:
+                    lines.append(f"    - Trigger-Referenz: {trigger_ref}")
 
 
 def payload_to_markdown(payload: dict[str, Any]) -> str:

@@ -606,6 +606,8 @@ def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], fin
                 "dependencies": measure.dependencies,
                 "deliverables": measure.deliverables[:3],
                 "kpi": measure.kpi,
+                "diagnosis": measure.description,
+                "trigger_items": (measure.evidence or {}).get("trigger_items", [])[:3],
             }
         )
     return by_bucket
@@ -640,7 +642,7 @@ def _render_catalog_summary(summary: dict[str, object]) -> None:
 
     details_by_bucket = summary.get("measure_details", {}) if isinstance(summary, dict) else {}
     if isinstance(details_by_bucket, dict):
-        st.markdown("**Maßnahmen-Details (Deliverables & KPI)**")
+        st.markdown("**Maßnahmen-Details (vollständig inkl. Evidenz-Trigger)**")
         for bucket, bucket_title in (("now", "Jetzt"), ("next", "Als Nächstes"), ("later", "Später")):
             entries = details_by_bucket.get(bucket, [])
             if not entries:
@@ -648,10 +650,19 @@ def _render_catalog_summary(summary: dict[str, object]) -> None:
             st.markdown(f"_{bucket_title}_")
             for entry in entries:
                 title = str(entry.get("title") or "Maßnahme")
-                deliverables = str(entry.get("deliverables_summary") or "")
+                deliverables = entry.get("deliverables") if isinstance(entry.get("deliverables"), list) else []
                 kpi_summary = str(entry.get("kpi_summary") or "")
-                if deliverables or kpi_summary:
-                    st.markdown(f"- **{title}**: {deliverables} {kpi_summary}".strip())
+                evidence_summary = str(entry.get("evidence_summary") or "")
+                trigger_refs = entry.get("trigger_refs") if isinstance(entry.get("trigger_refs"), list) else []
+                st.markdown(f"- **{title}**")
+                for deliverable in deliverables:
+                    st.markdown(f"  - Deliverable: {deliverable}")
+                if kpi_summary:
+                    st.markdown(f"  - KPI: {kpi_summary}")
+                if evidence_summary:
+                    st.markdown(f"  - Evidenz: {evidence_summary}")
+                for trigger_ref in trigger_refs:
+                    st.markdown(f"  - Trigger-Referenz: {trigger_ref}")
 
 def _build_markdown_export(export_version: str) -> str:
     use_case_id = st.session_state["use_case_id"]

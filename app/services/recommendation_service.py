@@ -231,7 +231,7 @@ class RecommendationService:
             selected.append(item)
 
         for question_id in self._dimension_questions.get(dimension, []):
-            if len(selected) >= 2:
+            if len(selected) >= 3:
                 break
             if any(item["item_id"] == question_id for item in selected):
                 continue
@@ -240,7 +240,11 @@ class RecommendationService:
             max_v = float(question_meta.get("max", 5.0))
             direction = str(question_meta.get("direction") or "higher_is_better")
             answer = answers.get(question_id)
-            deficit = self.calculate_deficit_score(answer, min_v, max_v, direction) or 0.0
+            if answer is None:
+                continue
+            deficit = self.calculate_deficit_score(answer, min_v, max_v, direction)
+            if deficit is None:
+                continue
             selected.append(
                 {
                     "question_id": question_id,
@@ -339,16 +343,11 @@ class RecommendationService:
     @staticmethod
     def _build_now_next_later(measures: list[Measure]) -> dict[str, list[str]]:
         ordered = sorted(measures, key=lambda m: (-m.priority_score, m.initiative_id))
-        buckets = {"now": [], "next": [], "later": []}
-        for measure in ordered:
-            deps = [dep for dep in measure.dependencies if dep.startswith("INIT-")]
-            if not deps and len(buckets["now"]) < 4:
-                buckets["now"].append(measure.initiative_id)
-            elif all(dep in buckets["now"] for dep in deps):
-                buckets["next"].append(measure.initiative_id)
-            else:
-                buckets["later"].append(measure.initiative_id)
-        return buckets
+        return {
+            "now": [measure.initiative_id for measure in ordered[:3]],
+            "next": [measure.initiative_id for measure in ordered[3:6]],
+            "later": [measure.initiative_id for measure in ordered[6:]],
+        }
 
     @staticmethod
     def _sequence_reason(measure: Measure, rules_applied: dict[str, Any]) -> str:

@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from adapters.llm_client import LLMClient
 from app.services.assessment_service import AssessmentService
 from app.services.catalog_summary_service import build_catalog_summary
+from app.services.measure_item_adapter import build_measures_by_bucket
 from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
 from app.services.questionnaire_service import QuestionType, QuestionnaireService
 from app.services.recommendation_service import RecommendationService
@@ -627,29 +628,7 @@ def _render_measures() -> None:
 
 
 def _build_catalog_summary_payload(catalog: object, selected_ids: list[str], final_priority: dict[str, int]) -> dict[str, list[dict[str, object]]]:
-    selected = [measure for measure in catalog.measures if measure.measure_id in selected_ids]
-    selected.sort(key=lambda measure: final_priority.get(measure.measure_id, measure.suggested_priority))
-
-    by_bucket: dict[str, list[dict[str, object]]] = {"now": [], "next": [], "later": []}
-    for measure in selected:
-        bucket = str((measure.priority or {}).get("bucket", "later")).lower()
-        if bucket not in by_bucket:
-            bucket = "later"
-        by_bucket[bucket].append(
-            {
-                "initiative_id": measure.initiative_id,
-                "title": measure.title,
-                "dimension": measure.dimension,
-                "priority": final_priority.get(measure.measure_id, measure.suggested_priority),
-                "dependencies": measure.dependencies,
-                "deliverables": measure.deliverables[:3],
-                "kpi": measure.kpi,
-                "diagnosis": measure.description,
-                "trigger_items": (measure.evidence or {}).get("trigger_items", [])[:3],
-                "rationale": (measure.evidence or {}).get("rationale", ""),
-            }
-        )
-    return by_bucket
+    return build_measures_by_bucket(catalog, selected_ids=selected_ids, final_priority=final_priority)
 
 
 def _render_catalog_summary(summary: dict[str, object]) -> None:

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://insighthub.local/schemas/questionnaire.schema.json",
+  "title": "InsightHub Questionnaire Spec",
+  "type": "object",
+  "required": ["schema_version", "questionnaire_version", "questions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "questionnaire_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "dimensionId": {
+      "type": "string",
+      "enum": ["BI_D1", "BI_D2", "BI_D3", "PA_D1", "PA_D2", "PA_D3", "CTX", "COUP", "SYN"]
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["higher_is_better", "lower_is_better"]
+    },
+    "answerType": {
+      "type": "string",
+      "enum": ["likert", "single_choice", "multi_choice", "text", "number"]
+    },
+    "scale": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": "integer" },
+        "max": { "type": "integer" },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "contextMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bereich": { "type": "array", "items": { "type": "string" } },
+        "prozess": { "type": "array", "items": { "type": "string" } },
+        "system": { "type": "array", "items": { "type": "string" } },
+        "role_owner": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "answer_type", "required", "dimension_id"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z]{2,6}_[0-9]{2}$" },
+        "text": { "type": "string", "minLength": 5 },
+        "answer_type": { "$ref": "#/$defs/answerType" },
+        "required": { "type": "boolean" },
+        "dimension_id": { "$ref": "#/$defs/dimensionId" },
+
+        "direction": { "$ref": "#/$defs/direction" },
+        "weight": { "type": "number", "minimum": 0, "maximum": 10 },
+
+        "scale": { "$ref": "#/$defs/scale" },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+
+        "context_meta": { "$ref": "#/$defs/contextMeta" },
+
+        "hint": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "answer_type": { "const": "likert" } } },
+          "then": {
+            "required": ["scale", "direction"],
+            "properties": {
+              "scale": {
+                "properties": {
+                  "min": { "type": "integer" },
+                  "max": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "answer_type": { "const": "single_choice" } } },
+          "then": { "required": ["options", "direction"] }
+        },
+        {
+          "if": { "properties": { "answer_type": { "const": "multi_choice" } } },
+          "then": { "required": ["options", "direction"] }
+        },
+        {
+          "if": { "properties": { "answer_type": { "const": "text" } } },
+          "then": { "not": { "required": ["scale", "options", "direction"] } }
+        }
+      ]
+    }
+  }
+}

@@ -128,7 +128,7 @@ def _render_single_choice(
 def _render_question(question: dict, current_value: object) -> object:
     question_id = question["id"]
     label = question["text"]
-    q_type = QuestionType(question["type"])
+    q_type = _resolve_question_type(question)
 
     if q_type == QuestionType.TEXT:
         return st.text_area(label, value=current_value or "", key=f"q_{question_id}")
@@ -143,7 +143,7 @@ def _render_question(question: dict, current_value: object) -> object:
         default_value = float(current_value) if isinstance(current_value, (int, float)) else 0.0
         return st.number_input(label, value=default_value, key=f"q_{question_id}")
 
-    if q_type == QuestionType.SCALE:
+    if q_type == QuestionType.LIKERT:
         scale = question.get("scale") or {"min": 1, "max": 5}
         min_value = int(scale.get("min", 1))
         max_value = int(scale.get("max", 5))
@@ -152,6 +152,36 @@ def _render_question(question: dict, current_value: object) -> object:
         return None if selected is None else int(selected)
 
     raise ValueError(f"Unbekannter Fragetyp: {q_type}")
+
+
+def _resolve_question_type(question: dict) -> QuestionType:
+    answer_type = question.get("answer_type")
+    if isinstance(answer_type, QuestionType):
+        return answer_type
+
+    normalized_answer_type = str(answer_type or "").strip().lower()
+    if normalized_answer_type.startswith("questiontype."):
+        normalized_answer_type = normalized_answer_type.split(".", maxsplit=1)[1]
+
+    if normalized_answer_type:
+        try:
+            return QuestionType(normalized_answer_type)
+        except ValueError:
+            pass
+
+    legacy_type = str(question.get("type") or "").strip().upper()
+    legacy_map = {
+        "SCALE": QuestionType.LIKERT,
+        "LIKERT": QuestionType.LIKERT,
+        "TEXT": QuestionType.TEXT,
+        "NUMBER": QuestionType.NUMBER,
+        "SINGLE_CHOICE": QuestionType.SINGLE_CHOICE,
+        "MULTI_CHOICE": QuestionType.MULTI_CHOICE,
+    }
+    resolved = legacy_map.get(legacy_type)
+    if resolved is None:
+        raise ValueError(f"Unbekannter Fragetyp: answer_type={answer_type}, type={question.get('type')}")
+    return resolved
 
 
 def _persist_answers(use_case_id: str, answer_set_id: str, version: str, answers: dict, lock: bool = False) -> None:

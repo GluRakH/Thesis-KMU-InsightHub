@@ -24,6 +24,7 @@ class RecommendationService:
         self._question_labels = self._load_question_labels()
         self._dimension_questions = self._load_dimension_questions()
         self.last_rules_applied: dict[str, Any] = {"gates": [], "thresholds": {}}
+        self.last_trigger_warnings: list[str] = []
 
     def generate_catalog(
         self,
@@ -64,7 +65,8 @@ class RecommendationService:
             gap_weight = self._gap_weight(level, domain, target_level_by_domain or {})
             priority_score = self.calculate_priority_score(impact, effort, criticality_weight, gap_weight)
 
-            triggers = self._normalize_trigger_items(dimension, evidence_by_dimension.get(dimension, []), answers_payload)
+            preferred = getattr(template, "trigger_items_preferred", None)
+            triggers = self._normalize_trigger_items(dimension, evidence_by_dimension.get(dimension, []), answers_payload, preferred)
             diagnosis = self._build_diagnosis(template.diagnosis_template, dimension, triggers)
             kpi_target = template.kpi_target_template.format(target_level=self._target_score(level, domain, target_level_by_domain or {}))
 
@@ -148,16 +150,16 @@ class RecommendationService:
         )
 
     @staticmethod
-    def calculate_deficit_score(answer: Any, min_value: float, max_value: float) -> float | None:
+    def calculate_deficit_score(answer: Any, min_value: float, max_value: float, direction: str = "higher_is_better") -> float | None:
         if answer is None:
             return None
         if max_value <= min_value:
-            return None
+            return 0.0
         try:
             value = float(answer)
         except (TypeError, ValueError):
             return None
-        normalized = 1 - ((value - min_value) / (max_value - min_value))
+        normalized = (1 - ((value - min_value) / (max_value - min_value))) if direction == "higher_is_better" else ((value - min_value) / (max_value - min_value))
         return round(max(0.0, min(1.0, normalized)), 4)
 
     @staticmethod
@@ -167,43 +169,92 @@ class RecommendationService:
     def _extract_evidence_by_dimension(self, answers: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, float]]:
         evidence: dict[str, list[dict[str, Any]]] = {}
         severity_by_dimension: dict[str, float] = {}
+        self.last_trigger_warnings = []
         for dimension_id, questions in self._dimension_questions.items():
             items: list[dict[str, Any]] = []
             for question_id in questions:
                 if question_id not in answers:
                     continue
-                min_v, max_v = self._question_meta.get(question_id, (1.0, 5.0))
-                deficit = self.calculate_deficit_score(answers.get(question_id), min_v, max_v)
+                question_meta = self._question_meta.get(question_id, {})
+                direction = str(question_meta.get("direction") or "")
+                if not direction:
+                    self.last_trigger_warnings.append(f"{question_id}: direction fehlt")
+                    continue
+                min_v = float(question_meta.get("min", 1.0))
+                max_v = float(question_meta.get("max", 5.0))
+                answer = answers.get(question_id)
+                deficit = self.calculate_deficit_score(answer, min_v, max_v, direction)
                 if deficit is None:
                     continue
-                items.append(
-                    {
-                        "item_id": question_id,
-                        "answer": answers.get(question_id),
-                        "deficit_score": deficit,
-                        "label": self._question_labels.get(question_id, question_id),
-                    }
-                )
+                trigger_item = {
+                    "question_id": question_id,
+                    "item_id": question_id,
+                    "question_text": self._question_labels.get(question_id, question_id),
+                    "label": self._question_labels.get(question_id, question_id),
+                    "dimension_id": dimension_id,
+                    "answer_type": str(question_meta.get("answer_type") or "unknown"),
+                    "answer_value": answer,
+                    "answer": answer,
+                    "scale": {"min": min_v, "max": max_v},
+                    "direction": direction,
+                    "deficit_score": deficit,
+                    "context_meta": dict(question_meta.get("context_meta") or {}),
+                }
+                if max_v <= min_v:
+                    trigger_item["calc_warning"] = "max_equals_min"
+                    self.last_trigger_warnings.append(f"{question_id}: max == min, deficit_score auf 0 gesetzt")
+                items.append(trigger_item)
             items.sort(key=lambda x: x["deficit_score"], reverse=True)
+            k = min(3, len(items))
             top_items = items[:3]
             evidence[dimension_id] = top_items
-            severity_by_dimension[dimension_id] = round(sum(x["deficit_score"] for x in top_items) / len(top_items), 4) if top_items else 0.0
+            severity_by_dimension[dimension_id] = round(sum(x["deficit_score"] for x in top_items) / k, 4) if k else 0.0
         return evidence, severity_by_dimension
 
-    def _normalize_trigger_items(self, dimension: str, items: list[dict[str, Any]], answers: dict[str, Any]) -> list[dict[str, Any]]:
-        selected = list(items[:3])
+    def _normalize_trigger_items(
+        self,
+        dimension: str,
+        items: list[dict[str, Any]],
+        answers: dict[str, Any],
+        preferred_items: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        selected: list[dict[str, Any]] = []
+        preferred_set = {item for item in (preferred_items or [])}
+        if preferred_set:
+            preferred_available = [item for item in items if item.get("item_id") in preferred_set]
+            selected.extend(preferred_available)
+        for item in items:
+            if len(selected) >= 3:
+                break
+            if any(existing.get("item_id") == item.get("item_id") for existing in selected):
+                continue
+            selected.append(item)
+
         for question_id in self._dimension_questions.get(dimension, []):
             if len(selected) >= 2:
                 break
             if any(item["item_id"] == question_id for item in selected):
                 continue
-            deficit = self.calculate_deficit_score(answers.get(question_id), *self._question_meta.get(question_id, (1.0, 5.0))) or 0.0
+            question_meta = self._question_meta.get(question_id, {})
+            min_v = float(question_meta.get("min", 1.0))
+            max_v = float(question_meta.get("max", 5.0))
+            direction = str(question_meta.get("direction") or "higher_is_better")
+            answer = answers.get(question_id)
+            deficit = self.calculate_deficit_score(answer, min_v, max_v, direction) or 0.0
             selected.append(
                 {
+                    "question_id": question_id,
                     "item_id": question_id,
-                    "answer": answers.get(question_id),
-                    "deficit_score": deficit,
+                    "question_text": self._question_labels.get(question_id, question_id),
                     "label": self._question_labels.get(question_id, question_id),
+                    "dimension_id": dimension,
+                    "answer_type": str(question_meta.get("answer_type") or "unknown"),
+                    "answer_value": answer,
+                    "answer": answer,
+                    "scale": {"min": min_v, "max": max_v},
+                    "direction": direction,
+                    "deficit_score": deficit,
+                    "context_meta": dict(question_meta.get("context_meta") or {}),
                 }
             )
         return selected[:3]
@@ -309,16 +360,43 @@ class RecommendationService:
                     return "Data Quality vor Industrialisierung"
         return "Keine aktive Gate-Blockade"
 
-    def _load_question_meta(self) -> dict[str, tuple[float, float]]:
+    def _load_question_meta(self) -> dict[str, dict[str, Any]]:
         path = self._scoring_dir / "questionnaire_v1.0.json"
         if not path.exists():
             return {}
         payload = json.loads(path.read_text(encoding="utf-8"))
-        return {
-            str(question.get("id")): (float((question.get("scale") or {}).get("min", 1)), float((question.get("scale") or {}).get("max", 5)))
-            for question in payload.get("questions", [])
-            if question.get("id")
+        meta: dict[str, dict[str, Any]] = {}
+        type_map = {
+            "scale": "likert",
+            "likert": "likert",
+            "single_choice": "single_choice",
+            "multi_choice": "multi_choice",
+            "number": "number",
+            "text": "text",
         }
+        for question in payload.get("questions", []):
+            question_id = str(question.get("id") or "")
+            if not question_id:
+                continue
+            scale = question.get("scale") or {}
+            answer_type = type_map.get(str(question.get("answer_type") or question.get("type", "")).lower(), "unknown")
+            raw_direction = question.get("direction")
+            direction = str(raw_direction or "").strip().lower()
+            if not direction and answer_type in {"likert", "single_choice", "multi_choice", "number"}:
+                direction = "higher_is_better"
+            meta[question_id] = {
+                "min": float(scale.get("min", 1)),
+                "max": float(scale.get("max", 5)),
+                "direction": direction,
+                "answer_type": answer_type,
+                "context_meta": {
+                    "bereich": question.get("bereich") or [],
+                    "prozess": question.get("prozess") or [],
+                    "system": question.get("system") or [],
+                    "role_owner": question.get("role_owner") or [],
+                },
+            }
+        return meta
 
     def _load_question_labels(self) -> dict[str, str]:
         path = self._scoring_dir / "questionnaire_v1.0.json"

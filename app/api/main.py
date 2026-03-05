@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.services.assessment_service import AssessmentService
-from app.services.questionnaire_service import QuestionnaireService
+from app.services.questionnaire_service import QuestionnaireService, ValidationStage
 from app.services.recommendation_service import RecommendationService
 from app.services.synthesis_service import SynthesisService
 from adapters.llm_client import LLMClient
@@ -111,7 +111,7 @@ def get_questionnaire(version: str = "v1.0") -> dict[str, Any]:
 
 @app.post("/answersets")
 def save_answer_set(request: SaveAnswerSetRequest) -> dict[str, Any]:
-    validation = questionnaire_service.validate_answer_set(request.version, request.answers)
+    validation = questionnaire_service.validate_answer_set(request.version, request.answers, stage=ValidationStage.DRAFT)
     if not validation.valid:
         raise HTTPException(
             status_code=422,
@@ -138,7 +138,7 @@ def save_answer_set(request: SaveAnswerSetRequest) -> dict[str, Any]:
                     question_id=question_id,
                     value=json.dumps(value, ensure_ascii=False),
                 )
-                for question_id, value in request.answers.items()
+                for question_id, value in validation.normalized_answers.items() if value is not None
             ],
         )
 
@@ -161,7 +161,7 @@ def validate_answer_set(answer_set_id: str) -> dict[str, Any]:
         answer_set, answers = loaded
         answer_payload = {answer.question_id: json.loads(answer.value) for answer in answers}
         version = answer_set.prompt_version.replace("questionnaire_", "") if answer_set.prompt_version.startswith("questionnaire_") else "v1.0"
-        result = questionnaire_service.validate_answer_set(version, answer_payload)
+        result = questionnaire_service.validate_answer_set(version, answer_payload, stage=ValidationStage.FINALIZE)
 
         if result.valid:
             repository.save_answer_set(
@@ -195,7 +195,7 @@ def run_assessments(answer_set_id: str) -> dict[str, Any]:
         answer_set, answers = loaded
         answer_payload = {answer.question_id: json.loads(answer.value) for answer in answers}
         version = answer_set.prompt_version.replace("questionnaire_", "") if answer_set.prompt_version.startswith("questionnaire_") else "v1.0"
-        validation = questionnaire_service.validate_answer_set(version, answer_payload)
+        validation = questionnaire_service.validate_answer_set(version, answer_payload, stage=ValidationStage.FINALIZE)
         if not validation.valid:
             raise HTTPException(
                 status_code=422,

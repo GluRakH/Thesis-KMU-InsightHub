@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://insighthub.local/schemas/answerset.schema.json",
+  "title": "InsightHub AnswerSet",
+  "type": "object",
+  "required": ["schema_version", "questionnaire_version", "answers"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "questionnaire_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "answer_set_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "answers": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "integer" },
+          { "type": "number" },
+          { "type": "string" },
+          { "type": "boolean" },
+          {
+            "type": "array",
+            "items": { "type": "string" },
+            "uniqueItems": true
+          },
+          { "type": "null" }
+        ]
+      }
+    }
+  }
+}

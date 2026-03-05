@@ -6,6 +6,8 @@ from typing import Any
 
 import json
 
+from jsonschema import Draft202012Validator
+
 from domain.models import MeasureCategory
 
 
@@ -43,7 +45,7 @@ FALLBACK_TEMPLATE = InitiativeTemplate(
     kpi_name="Meilensteinerreichung priorisierte Dimension",
     kpi_target_template=">= 80% der 90-Tage-Meilensteine termingerecht erreicht",
     kpi_measurement="Monatliches PMO-Tracking auf Maßnahmenebene",
-    kpi_frequency="monatlich",
+    kpi_frequency="monthly",
     kpi_source_system="PMO-Board",
     kpi_owner_role="Programmleitung",
     impact=3,
@@ -65,21 +67,66 @@ class TemplateValidationError(ValueError):
     pass
 
 
-def _validate_template(template_id: str, payload: dict[str, Any], template_version: str) -> InitiativeTemplate:
-    required = ["title", "category", "goal", "diagnosis_template", "deliverables", "kpi", "impact", "effort"]
-    missing = [field for field in required if field not in payload]
-    if missing:
-        raise TemplateValidationError(f"Template '{template_id}' fehlt Pflichtfelder: {', '.join(missing)}")
+def _templates_schema_validator() -> Draft202012Validator:
+    schema_path = Path(__file__).resolve().parents[1] / "schemas" / "templates.schema.json"
+    payload = json.loads(schema_path.read_text(encoding="utf-8"))
+    return Draft202012Validator(payload)
 
+
+def _canonicalize_templates(payload: dict[str, Any]) -> dict[str, Any]:
+    if "templates" in payload:
+        return payload
+
+    reverse_map: dict[str, list[str]] = {}
+    for dim, template_ids in DIMENSION_TEMPLATE_MAP.items():
+        for template_id in template_ids:
+            reverse_map.setdefault(template_id, []).append(dim)
+
+    templates: list[dict[str, Any]] = []
+    items = payload.get("items", {})
+    for template_id, item in items.items():
+        kpi = item.get("kpi", {})
+        frequency_map = {"wöchentlich": "weekly", "monatlich": "monthly", "quartalsweise": "quarterly"}
+        frequency_raw = str(kpi.get("frequency", "monthly")).strip().lower()
+        templates.append(
+            {
+                "template_id": template_id,
+                "title": item.get("title"),
+                "category": item.get("category"),
+                "applies_to": {"dimensions": reverse_map.get(template_id, ["BI_D1"])},
+                "goal": item.get("goal"),
+                "deliverables": item.get("deliverables"),
+                "kpi": {
+                    "name": kpi.get("name"),
+                    "baseline_definition": kpi.get("baseline_definition") or f"Baseline für {kpi.get('name', template_id)}",
+                    "target": kpi.get("target") or kpi.get("target_template"),
+                    "measurement": kpi.get("measurement"),
+                    "frequency": frequency_map.get(frequency_raw, frequency_raw),
+                    "source_system": kpi.get("source_system"),
+                    "owner_role": kpi.get("owner_role"),
+                },
+                "impact": item.get("impact"),
+                "effort": item.get("effort"),
+            }
+        )
+
+    return {
+        "schema_version": str(payload.get("schema_version", "1.0.0")),
+        "template_version": str(payload.get("template_version", "1.0.0")) + (".0" if str(payload.get("template_version", "1.0.0")).count(".")==1 else ""),
+        "templates": templates,
+    }
+
+
+def _validate_template(template_id: str, payload: dict[str, Any], template_version: str) -> InitiativeTemplate:
     deliverables = payload.get("deliverables")
-    if not isinstance(deliverables, list) or len(deliverables) != 3 or any(not str(item).strip() for item in deliverables):
+    if not isinstance(deliverables, list) or len(deliverables) != 3:
         raise TemplateValidationError(f"Template '{template_id}' muss exakt 3 Deliverables enthalten")
 
     kpi = payload.get("kpi")
     if not isinstance(kpi, dict):
         raise TemplateValidationError(f"Template '{template_id}' enthält kein KPI-Objekt")
-    for field in ("name", "target_template", "measurement"):
-        if not str(kpi.get(field, "")).strip():
+    for field in ("name", "baseline_definition", "target", "measurement", "frequency"):
+        if field not in kpi or (isinstance(kpi.get(field), str) and not kpi.get(field).strip()):
             raise TemplateValidationError(f"Template '{template_id}' KPI-Feld '{field}' fehlt")
 
     return InitiativeTemplate(
@@ -88,14 +135,14 @@ def _validate_template(template_id: str, payload: dict[str, Any], template_versi
         title=str(payload["title"]),
         category=MeasureCategory(str(payload["category"])),
         goal=str(payload["goal"]),
-        diagnosis_template=str(payload["diagnosis_template"]),
+        diagnosis_template=str(payload.get("diagnosis_template", "In {dimension} zeigen {trigger_summary} Handlungsbedarf.")),
         deliverables=tuple(str(item) for item in deliverables),
         kpi_name=str(kpi["name"]),
-        kpi_target_template=str(kpi["target_template"]),
+        kpi_target_template=str(kpi["target"]),
         kpi_measurement=str(kpi["measurement"]),
-        kpi_frequency=str(kpi.get("frequency", "monatlich")),
-        kpi_source_system=str(kpi.get("source_system", "N/A")),
-        kpi_owner_role=str(kpi.get("owner_role", "N/A")),
+        kpi_frequency=str(kpi["frequency"]),
+        kpi_source_system=str(kpi.get("source_system") or "N/A"),
+        kpi_owner_role=str(kpi.get("owner_role") or "N/A"),
         impact=int(payload["impact"]),
         effort=int(payload["effort"]),
     )
@@ -106,23 +153,21 @@ def load_templates(config_path: Path | None = None, dev_mode: bool = False) -> t
     if not path.exists():
         return {}, "default"
 
-    data = json.loads(path.read_text(encoding="utf-8")) if path.read_text(encoding="utf-8").strip() else {}
+    raw_text = path.read_text(encoding="utf-8")
+    data = json.loads(raw_text) if raw_text.strip() else {}
+    canonical = _canonicalize_templates(data)
 
-    version = str(data.get("template_version", "default"))
-    items = data.get("items", {})
-    if not isinstance(items, dict):
-        raise TemplateValidationError("templates.yaml: 'items' muss ein Objekt sein")
-
-    registry: dict[str, InitiativeTemplate] = {}
-    try:
-        for template_id, payload in items.items():
-            if not isinstance(payload, dict):
-                raise TemplateValidationError(f"Template '{template_id}' muss ein Objekt sein")
-            registry[str(template_id)] = _validate_template(str(template_id), payload, version)
-    except TemplateValidationError:
+    errors = sorted(_templates_schema_validator().iter_errors(canonical), key=lambda e: e.path)
+    if errors:
         if dev_mode:
-            raise
+            raise TemplateValidationError(f"templates schema validation failed: {errors[0].message}")
         return {}, "default"
+
+    version = str(canonical.get("template_version", "default"))
+    registry: dict[str, InitiativeTemplate] = {}
+    for payload in canonical.get("templates", []):
+        template_id = str(payload.get("template_id"))
+        registry[template_id] = _validate_template(template_id, payload, version)
 
     return registry, version
 

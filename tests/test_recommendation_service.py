@@ -1,3 +1,4 @@
+from pathlib import Path
 import unittest
 
 from adapters.llm_client import LLMClient
@@ -15,6 +16,41 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertTrue(registry)
         self.assertNotEqual(version, "default")
         self.assertTrue(all(len(item.deliverables) == 3 for item in registry.values()))
+
+
+    def test_templates_deliverables_not_three_errors(self) -> None:
+        from tempfile import NamedTemporaryFile
+        import json
+
+        broken = {
+            "schema_version": "1.0.0",
+            "template_version": "1.0.0",
+            "templates": [
+                {
+                    "template_id": "BROKEN_01",
+                    "title": "Broken Template",
+                    "category": "governance",
+                    "applies_to": {"dimensions": ["BI_D1"]},
+                    "goal": "A sufficiently long goal text",
+                    "deliverables": ["only one"],
+                    "kpi": {
+                        "name": "KPI",
+                        "baseline_definition": "baseline defined",
+                        "target": "target",
+                        "measurement": "measurement text",
+                        "frequency": "monthly"
+                    },
+                    "impact": 3,
+                    "effort": 2
+                }
+            ]
+        }
+        with NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+            json.dump(broken, handle)
+            path = handle.name
+
+        with self.assertRaises(TemplateValidationError):
+            load_templates(Path(path), dev_mode=True)
 
     def test_priority_score_not_zero(self) -> None:
         synthesis = Synthesis(synthesis_id="syn-1", answer_set_id="as-1", bi_assessment_id="bi-1", pa_assessment_id="pa-1", recommendation="r")
@@ -73,6 +109,7 @@ class RecommendationServiceTestCase(unittest.TestCase):
         first_label = str(normalized[0].get("label") or "")
         self.assertTrue(first_label)
         self.assertNotEqual(first_label, normalized[0].get("item_id"))
+        self.assertTrue(str(normalized[0].get("question_text") or ""))
 
     def test_evidence_extraction_range_and_size(self) -> None:
         evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})
@@ -80,6 +117,17 @@ class RecommendationServiceTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(normalized), 2)
         self.assertLessEqual(len(normalized), 3)
         self.assertTrue(all(0.0 <= float(item["deficit_score"]) <= 1.0 for item in normalized))
+
+    def test_deficit_with_invalid_scale_returns_zero_with_warning(self) -> None:
+        self.assertEqual(self.service.calculate_deficit_score(3, 5, 5, "higher_is_better"), 0.0)
+
+    def test_preferred_trigger_items_are_selected_first(self) -> None:
+        evidence, _ = self.service._extract_evidence_by_dimension({"DA_01": 1, "DA_02": 2, "DA_03": 3})
+        normalized = self.service._normalize_trigger_items(
+            "BI_D1", evidence.get("BI_D1", []), {"DA_01": 1, "DA_02": 2, "DA_03": 3}, ["DA_03"]
+        )
+        self.assertTrue(normalized)
+        self.assertEqual(normalized[0].get("item_id"), "DA_03")
 
 
 if __name__ == "__main__":

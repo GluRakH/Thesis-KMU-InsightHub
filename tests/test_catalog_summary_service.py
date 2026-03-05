@@ -15,7 +15,7 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
                     "priority": 1,
                     "dependencies": [],
                     "deliverables": ["RACI", "Gremium", "Policy"],
-                    "kpi": {"name": "Owner-Abdeckung", "target": ">=90%", "measurement": "Monatliches Audit"},
+                    "kpi": {"name": "Owner-Abdeckung", "target": ">=90%", "measurement": "Monatliches Audit", "frequency": "monthly"},
                     "trigger_items": [{"item_id": "DA_01", "label": "DA_01"}],
                     "rationale": "Für BI_D1 priorisiert, weil Defizite in DA_01 dominieren.",
                 }
@@ -55,7 +55,7 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
                     "priority": 2,
                     "dependencies": [],
                     "deliverables": ["Regelwerk", "Dashboard", "Review"],
-                    "kpi": {"name": "DQ-Fehlerquote", "target": "<5%", "measurement": "Wöchentlich"},
+                    "kpi": {"name": "DQ-Fehlerquote", "target": "<5%", "measurement": "Wöchentlich", "frequency": "weekly"},
                     "trigger_items": [{"item_id": "DA_02", "label": "DA_02"}],
                     "rationale": "Für BI_D2 priorisiert, weil DQ-Defizite dominieren.",
                 },
@@ -100,6 +100,34 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
         self.assertEqual(len(now_details), 2)
         self.assertEqual(now_details[0].get("deliverables"), ["LLM-RACI"])
         self.assertEqual(now_details[1].get("title"), "Datenqualitätsregeln etablieren")
+
+    def test_invalid_item_is_marked_invalid(self) -> None:
+        invalid_payload = {
+            "now": [
+                {
+                    "initiative_id": "INIT-1",
+                    "title": "Broken",
+                    "dimension": "BI_D1",
+                    "priority": 1,
+                    "dependencies": [],
+                    "deliverables": ["only one"],
+                    "kpi": {},
+                    "trigger_items": [],
+                    "rationale": "",
+                }
+            ],
+            "next": [],
+            "later": [],
+        }
+        summary = build_catalog_summary(focus="x", measures_by_bucket=invalid_payload)
+        kpi_summary = summary["measure_details"]["now"][0]["kpi_summary"]
+        self.assertIn("INVALID ITEM", kpi_summary)
+        self.assertNotIn("KPI nicht definiert", kpi_summary)
+
+    def test_invalid_item_raises_in_dev_mode(self) -> None:
+        invalid_payload = {"now": [{"initiative_id": "INIT-1", "title": "Broken", "deliverables": [], "kpi": {}, "trigger_items": []}], "next": [], "later": []}
+        with self.assertRaises(ValueError):
+            build_catalog_summary(focus="x", measures_by_bucket=invalid_payload, dev_mode=True)
 
 
 if __name__ == "__main__":

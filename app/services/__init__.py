@@ -1,13 +1,7 @@
-from app.services.questionnaire_service import (
-    AnswerSetFinalizeStatus,
-    QuestionnaireDefinition,
-    QuestionnaireService,
-    ValidationIssue,
-    ValidationResult,
-)
+from app.services.questionnaire_service import QuestionnaireDefinition, QuestionnaireService, ValidationIssue, ValidationResult, ValidationStage
 
 __all__ = [
-    "AnswerSetFinalizeStatus",
+    "ValidationStage",
     "QuestionnaireDefinition",
     "QuestionnaireService",
     "ValidationIssue",

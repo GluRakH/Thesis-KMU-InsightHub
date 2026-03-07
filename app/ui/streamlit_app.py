@@ -17,6 +17,7 @@ from adapters.llm_client import LLMClient
 from app.services.assessment_service import AssessmentService
 from app.services.catalog_summary_service import build_catalog_summary
 from app.services.measure_item_adapter import build_measures_by_bucket
+from app.services.dimension_labels import format_dimension
 from app.services.export_service import build_export_payload, payload_to_json, payload_to_markdown
 from app.services.questionnaire_service import QuestionType, QuestionnaireService
 from app.services.recommendation_service import RecommendationService
@@ -413,6 +414,17 @@ def _render_questionnaire() -> None:
         st.json(st.session_state["validation"])
 
 
+
+def _format_dimension_scores(dimension_scores: dict[str, float]) -> dict[str, float]:
+    return {format_dimension(dimension_id): score for dimension_id, score in dimension_scores.items()}
+
+
+def _format_evidence_summary(evidence_summary: str) -> str:
+    text = str(evidence_summary or "")
+    for dimension_id in ("BI_D1", "BI_D2", "BI_D3", "PA_D1", "PA_D2", "PA_D3"):
+        text = text.replace(f"Dimension {dimension_id}", f"Dimension {format_dimension(dimension_id)}")
+    return text
+
 def _render_results() -> None:
     st.subheader("Ergebnisse: BI/PA-Bewertung und Synthese")
     answer_set_id = st.session_state["answer_set_id"]
@@ -442,13 +454,13 @@ def _render_results() -> None:
         st.markdown("### BI-Bewertung")
         st.metric("Punktzahl", f"{pipeline['bi']['score']:.2f}")
         st.write(pipeline["bi"]["summary"])
-        st.json(pipeline["bi"]["dimension_scores"])
+        st.json(_format_dimension_scores(pipeline["bi"]["dimension_scores"]))
 
     with pa_col:
         st.markdown("### PA-Bewertung")
         st.metric("Punktzahl", f"{pipeline['pa']['score']:.2f}")
         st.write(pipeline["pa"]["summary"])
-        st.json(pipeline["pa"]["dimension_scores"])
+        st.json(_format_dimension_scores(pipeline["pa"]["dimension_scores"]))
 
     _render_result_legend()
 
@@ -679,7 +691,7 @@ def _render_catalog_summary(summary: dict[str, object]) -> None:
                 if kpi_summary:
                     st.markdown(f"  - KPI: {kpi_summary}")
                 if evidence_summary:
-                    st.markdown(f"  - Evidenz: {evidence_summary}")
+                    st.markdown(f"  - Evidenz: {_format_evidence_summary(evidence_summary)}")
                 for trigger_ref in trigger_refs:
                     st.markdown(f"  - Evidenz-Trigger: {trigger_ref}")
 

@@ -5,6 +5,7 @@ import logging
 import re
 
 from adapters.llm_client import LLMClient
+from app.services.dimension_labels import format_dimension
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,7 @@ def _validated_item(item: dict[str, Any], dev_mode: bool = False) -> tuple[dict[
 
 def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[dict[str, Any]]], dev_mode: bool = False) -> dict[str, Any]:
     def _bullet(item: dict[str, Any]) -> str:
-        return f"{item.get('initiative_id')}: {item.get('title')} ({item.get('dimension')}, Rang {item.get('priority')})"
+        return f"{item.get('initiative_id')}: {item.get('title')} ({format_dimension(str(item.get('dimension') or ''))}, Rang {item.get('priority')})"
 
     details: dict[str, list[dict[str, Any]]] = {"now": [], "next": [], "later": []}
     for bucket in ("now", "next", "later"):
@@ -163,7 +164,7 @@ def _build_deterministic_summary(focus: str, measures_by_bucket: dict[str, list[
             trigger_refs = [_format_trigger_ref(trigger) for trigger in triggers]
             trigger_ids = ", ".join(str(trigger.get("item_id") or "?") for trigger in triggers) or "keine"
             dimension = str(item.get("dimension") or "unbekannt")
-            deterministic_evidence = f"Dimension {dimension}; Top-Trigger: {trigger_ids}."
+            deterministic_evidence = f"Dimension {format_dimension(dimension)}; Top-Trigger: {trigger_ids}."
             if errors:
                 details[bucket].append(
                     {
@@ -225,12 +226,13 @@ def _build_llm_payload(measures_by_bucket: dict[str, list[dict[str, Any]]], dev_
                 {
                     "initiative_id": item.get("initiative_id"),
                     "title": item.get("title"),
-                    "dimension": item.get("dimension"),
+                    "dimension": format_dimension(str(item.get("dimension") or "")),
+                    "dimension_id": item.get("dimension"),
                     "priority": item.get("priority"),
                     "dependencies": item.get("dependencies", []),
                     "deliverables": item.get("deliverables", [])[:3],
                     "kpi_summary": kpi_summary,
-                    "evidence_summary": f"Dimension {item.get('dimension') or 'unbekannt'}; Top-Trigger: {trigger_ids}.",
+                    "evidence_summary": f"Dimension {format_dimension(str(item.get('dimension') or 'unbekannt'))}; Top-Trigger: {trigger_ids}.",
                     "trigger_refs": trigger_refs,
                 }
             )

@@ -42,6 +42,10 @@ class ExportServiceTestCase(unittest.TestCase):
         md = payload_to_markdown(payload)
         self.assertIn("Evidenz-Trigger: DA_01", md)
         self.assertIn("Sequenz: Governance vor Skalierung", md)
+        self.assertIn("BI-Governance (BI_D1)", md)
+        now_initiative = payload["initiatives"]["now"][0]
+        self.assertEqual(now_initiative["dimension_meta"]["label"], "BI-Governance")
+        self.assertEqual(now_initiative["evidence"]["dimension_label"], "BI-Governance (BI_D1)")
 
     def test_payload_json(self) -> None:
         raw = payload_to_json({"a": 1})

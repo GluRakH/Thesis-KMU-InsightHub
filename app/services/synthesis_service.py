@@ -90,29 +90,36 @@ class SynthesisService:
         bi_assessment: BIAssessment,
         pa_assessment: PAAssessment,
     ) -> SynthesisHeuristicResult:
-        if bi_assessment.score <= 40 and pa_assessment.score >= 60:
+        delta = pa_assessment.score - bi_assessment.score
+        bi_level = int(getattr(bi_assessment, "maturity_level", 0) or 0)
+        pa_level = int(getattr(pa_assessment, "maturity_level", 0) or 0)
+        level_delta = pa_level - bi_level
+
+        if delta >= 10 or level_delta >= 1:
             return SynthesisHeuristicResult(
-                priority_focus="Fokus zuerst auf Datenfundament und KPI-Steuerung",
+                priority_focus="BI-first",
                 reason=(
-                    "PA-Bereitschaft ist höher als BI-Reife; ohne konsistente Daten und KPI-Definitionen "
-                    "wird Automatisierung instabil und schwer messbar"
+                    "PA liegt vor BI (ΔScore "
+                    f"{delta:.2f}, ΔLevel {level_delta:+d}); priorisiere Datenfundament und KPI-Steuerung "
+                    "für belastbare Automatisierung"
                 ),
             )
 
-        if pa_assessment.score <= 40 and bi_assessment.score >= 60:
+        if delta <= -10 or level_delta <= -1:
             return SynthesisHeuristicResult(
-                priority_focus="Fokus zuerst auf Prozessstandardisierung und Automatisierungsfähigkeit",
+                priority_focus="Automation-first",
                 reason=(
-                    "BI-Erkenntnisse sind vorhanden, aber PA-Reife ist zu niedrig; "
-                    "ohne standardisierte Prozesse fehlt die Grundlage für skalierbare Automatisierung"
+                    "BI liegt vor PA (ΔScore "
+                    f"{delta:.2f}, ΔLevel {level_delta:+d}); priorisiere Prozessstandardisierung und "
+                    "Automatisierungsfähigkeit für schnelle Umsetzung"
                 ),
             )
 
         return SynthesisHeuristicResult(
-            priority_focus="Parallelisierung mit ausgewogenem BI/PA-Backlog",
+            priority_focus="Balanced",
             reason=(
-                "BI- und PA-Reife sind ähnlich; ein abgestimmtes Maßnahmenpaket reduziert Risiken "
-                "und verbessert Time-to-Value"
+                "Differenz liegt innerhalb der Stabilitätsschwelle (±10 Score-Punkte und < 1 Level); "
+                "Parallelisierung mit ausgewogenem BI/PA-Backlog ist sinnvoll"
             ),
         )
 

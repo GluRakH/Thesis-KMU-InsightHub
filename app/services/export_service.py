@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.services.dimension_labels import enrich_dimension_payload, format_dimension
 from domain.models import MeasureCatalog
 
 
@@ -17,6 +18,7 @@ def _initiative_payload(measure: Any) -> dict[str, Any]:
         "id": measure.initiative_id or measure.measure_id,
         "title": measure.title,
         "dimension": measure.dimension,
+        "dimension_meta": enrich_dimension_payload(measure.dimension),
         "category": measure.category.value,
         "bucket": str((measure.priority or {}).get("bucket", "later")),
         "priority_score": float(measure.priority_score),
@@ -38,6 +40,7 @@ def _initiative_payload(measure: Any) -> dict[str, Any]:
         },
         "evidence": {
             "dimension_id": evidence.get("dimension_id", measure.dimension),
+            "dimension_label": format_dimension(str(evidence.get("dimension_id", measure.dimension) or "")),
             "severity": float(evidence.get("severity", 0.0)),
             "trigger_items": triggers,
             "rationale": str(evidence.get("rationale", "")),
@@ -69,6 +72,10 @@ def build_export_payload(
             "bi": pipeline.get("bi", {}),
             "pa": pipeline.get("pa", {}),
             "synthesis": pipeline.get("synthesis", {}),
+            "dimension_labels": {
+                "bi": {format_dimension(key): value for key, value in dict(pipeline.get("bi", {}).get("dimension_scores", {})).items()},
+                "pa": {format_dimension(key): value for key, value in dict(pipeline.get("pa", {}).get("dimension_scores", {})).items()},
+            },
             "scores": {
                 "bi_score": float(pipeline.get("bi", {}).get("score", 0.0)),
                 "pa_score": float(pipeline.get("pa", {}).get("score", 0.0)),
@@ -144,7 +151,7 @@ def payload_to_markdown(payload: dict[str, Any]) -> str:
             lines.append(f"  - Lieferobjekte: {', '.join(measure.get('deliverables', []))}")
             lines.append(f"  - KPI: {measure['kpi'].get('name')} | Ziel: {measure['kpi'].get('target')} | Messung: {measure['kpi'].get('measurement')}")
             evidence = measure.get("evidence", {})
-            lines.append(f"  - Evidenz: Dimension {evidence.get('dimension_id')} | Severity {float(evidence.get('severity', 0.0)):.2f}")
+            lines.append(f"  - Evidenz: Dimension {evidence.get('dimension_label') or format_dimension(str(evidence.get('dimension_id') or ''))} | Severity {float(evidence.get('severity', 0.0)):.2f}")
             for trigger in evidence.get("trigger_items", []):
                 lines.append(f"    - Evidenz-Trigger: {trigger.get('item_id')} ({trigger.get('answer')}) deficit={trigger.get('deficit_score')}")
 

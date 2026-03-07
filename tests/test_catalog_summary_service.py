@@ -138,7 +138,7 @@ class CatalogSummaryServiceTestCase(unittest.TestCase):
         detail = summary["measure_details"]["now"][0]
         self.assertIn("Owner-Abdeckung", detail["kpi_summary"])
         self.assertNotIn("INVALID", detail["kpi_summary"])
-        self.assertIn("Dimension BI_D1", detail["evidence_summary"])
+        self.assertIn("BI-Governance (BI_D1)", detail["evidence_summary"])
 
     def test_deterministic_trigger_refs_include_answer_and_deficit(self) -> None:
         payload = {

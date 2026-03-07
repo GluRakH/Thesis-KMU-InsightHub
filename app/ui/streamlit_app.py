@@ -64,6 +64,7 @@ STEP_LABELS = {
 def _init_state() -> None:
     defaults = {
         "use_case_id": None,
+        "active_use_case_id": None,
         "answer_set_id": None,
         "catalog_id": None,
         "version": "v1.0",
@@ -75,6 +76,11 @@ def _init_state() -> None:
         "use_llm_texts": True,
         "catalog_summary": None,
         "rules_applied": {},
+        "imported_answers": {},
+        "usecase_title": "",
+        "usecase_description": "",
+        "usecase_type": UseCaseType.COMBINED,
+        "reload_use_case_from_db": False,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -186,8 +192,20 @@ def _resolve_question_type(question: dict) -> QuestionType:
     return resolved
 
 
-def _persist_answers(use_case_id: str, answer_set_id: str, version: str, answers: dict, lock: bool = False) -> None:
-    status = AnswerSetStatus.LOCKED if lock else AnswerSetStatus.SUBMITTED
+def _persist_answers(
+    use_case_id: str,
+    answer_set_id: str,
+    version: str,
+    answers: dict,
+    lock: bool = False,
+    draft: bool = False,
+) -> None:
+    if lock:
+        status = AnswerSetStatus.LOCKED
+    elif draft:
+        status = AnswerSetStatus.DRAFT
+    else:
+        status = AnswerSetStatus.SUBMITTED
     with session_factory() as session:
         repository = PersistenceRepository(session)
         repository.save_answer_set(
@@ -319,13 +337,33 @@ def _render_header() -> str:
 
 def _render_start() -> None:
     st.subheader("Start: Use Case erfassen")
+
+    active_use_case_id = st.session_state.get("active_use_case_id") or st.session_state.get("use_case_id")
+    force_reload = st.session_state.pop("reload_use_case_from_db", False)
+    if active_use_case_id:
+        with session_factory() as session:
+            use_case_entity = session.get(UseCaseEntity, active_use_case_id)
+        if use_case_entity is not None and (
+            force_reload
+            or not st.session_state.get("usecase_title")
+            or not st.session_state.get("usecase_description")
+        ):
+            st.session_state["usecase_title"] = use_case_entity.name
+            st.session_state["usecase_description"] = use_case_entity.description
+            st.session_state["usecase_type"] = use_case_entity.use_case_type
+
+    if st.button("Use Case aus DB neu laden"):
+        st.session_state["reload_use_case_from_db"] = True
+        st.rerun()
+
     with st.form("use_case_form"):
-        name = st.text_input("Titel", value="")
-        description = st.text_area("Beschreibung", value="")
+        name = st.text_input("Titel", key="usecase_title")
+        description = st.text_area("Beschreibung", key="usecase_description")
         use_case_type = st.selectbox(
             "Typ",
             options=[UseCaseType.COMBINED, UseCaseType.BUSINESS_IMPACT, UseCaseType.PROCESS_AUTOMATION],
             format_func=lambda item: item.value,
+            key="usecase_type",
         )
         submitted = st.form_submit_button("Use Case speichern")
 
@@ -334,7 +372,7 @@ def _render_start() -> None:
             st.error("Bitte Titel und Beschreibung ausfüllen.")
             return
 
-        use_case_id = f"uc-{uuid4().hex[:12]}"
+        use_case_id = st.session_state.get("active_use_case_id") or st.session_state.get("use_case_id") or f"uc-{uuid4().hex[:12]}"
         use_case = UseCase(
             use_case_id=use_case_id,
             name=name.strip(),
@@ -345,7 +383,9 @@ def _render_start() -> None:
             PersistenceRepository(session).create_use_case(use_case)
 
         st.session_state["use_case_id"] = use_case_id
-        st.session_state["answer_set_id"] = f"as-{uuid4().hex[:12]}"
+        st.session_state["active_use_case_id"] = use_case_id
+        if not st.session_state.get("answer_set_id"):
+            st.session_state["answer_set_id"] = f"as-{uuid4().hex[:12]}"
         st.success(f"Use Case gespeichert: {use_case_id}")
 
     if st.session_state["use_case_id"]:
@@ -370,6 +410,52 @@ def _render_questionnaire() -> None:
     questionnaire = questionnaire_service.get_questionnaire(st.session_state["version"])
     question_payload = questionnaire.model_dump()["questions"]
     grouped_questions = _group_questions(question_payload)
+    known_question_ids = {question["id"] for question in question_payload}
+
+    uploaded_file = st.file_uploader("AnswerSet JSON importieren", type=["json"], key="answerset_json_import")
+    if uploaded_file is not None and st.button("Import starten", key="import_answerset_button"):
+        try:
+            imported_payload = json.loads(uploaded_file.getvalue())
+        except json.JSONDecodeError as exc:
+            st.error(f"JSON konnte nicht geparst werden: {exc}")
+        else:
+            if not isinstance(imported_payload, dict):
+                st.error("Import fehlgeschlagen: JSON muss ein Objekt (dict) sein.")
+            elif any(not isinstance(key, str) for key in imported_payload):
+                st.error("Import fehlgeschlagen: Alle Keys im JSON müssen Strings sein.")
+            else:
+                unknown_keys = sorted([key for key in imported_payload if key not in known_question_ids])
+                if unknown_keys:
+                    st.error("Unbekannte Frage-IDs im Import gefunden.")
+                    st.code("\n".join(unknown_keys))
+
+                dry_result = questionnaire_service.validate_answer_set(st.session_state["version"], imported_payload)
+                st.session_state["validation"] = dry_result.model_dump()
+                if not dry_result.valid:
+                    st.error("Import enthält Validierungsfehler. Wichtigste Hinweise:")
+                    for issue in dry_result.issues[:5]:
+                        st.write(f"- {issue.question_id}: {issue.message} ({issue.code})")
+                else:
+                    st.info("Dry-Validation erfolgreich.")
+
+                st.session_state["imported_answers"] = imported_payload
+                st.session_state["answers"] = {**st.session_state.get("answers", {}), **imported_payload}
+
+                for key in [state_key for state_key in st.session_state if state_key.startswith("q_")]:
+                    del st.session_state[key]
+
+                if unknown_keys or not dry_result.valid:
+                    st.warning("Import übernommen, aber wegen Validierungsproblemen nicht als Draft gespeichert.")
+                else:
+                    _persist_answers(
+                        use_case_id=use_case_id,
+                        answer_set_id=st.session_state["answer_set_id"],
+                        version=st.session_state["version"],
+                        answers=st.session_state["answers"],
+                        draft=True,
+                    )
+                    st.success("Import erfolgreich und als Draft gespeichert.")
+                st.rerun()
 
     with st.form("questionnaire_form"):
         answers: dict[str, object] = {}
